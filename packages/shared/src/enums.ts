@@ -98,6 +98,9 @@ export const AuditAction = {
   PATIENT_LINK_CREATED: 'patient_link.created',
   PATIENT_LINK_REVOKED: 'patient_link.revoked',
   PATIENT_LINK_CONSUMED: 'patient_link.consumed',
+  PATIENT_LINK_OPENED: 'patient_link.opened',
+  PRESCRIPTION_SUBMITTED: 'prescription.submitted',
+  SECURITY_PERSONALIZED_LINK_TAMPERING: 'security.personalized_link_tampering',
   AUTHZ_DENIED: 'authz.denied',
 } as const;
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];

@@ -14,3 +14,5 @@ export * from './schemas/stores.js';
 export * from './patient-link-status.js';
 export * from './schemas/patients.js';
 export * from './schemas/patient-links.js';
+export * from './upload.js';
+export * from './schemas/public.js';

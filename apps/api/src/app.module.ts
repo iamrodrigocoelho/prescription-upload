@@ -18,6 +18,7 @@ import { HealthModule } from './modules/health/health.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
 import { PatientLinksModule } from './modules/patient-links/patient-links.module.js';
 import { PatientsModule } from './modules/patients/patients.module.js';
+import { PublicModule } from './modules/public/public.module.js';
 import { StoresModule } from './modules/stores/stores.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 
@@ -42,6 +43,7 @@ import { UsersModule } from './modules/users/users.module.js';
     StoresModule,
     PatientsModule,
     PatientLinksModule,
+    PublicModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
 })

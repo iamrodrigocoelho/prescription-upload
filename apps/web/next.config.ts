@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: resolve(import.meta.dirname, '../..'),
   turbopack: { root: resolve(import.meta.dirname, '../..') },
   images: { unoptimized: true },
+  // Em dev, o Next loga cada requisição; /p/{token} carrega uma credencial (PRD §6.5).
+  logging: { incomingRequests: { ignore: [/^\/p\//, /^\/api\/public\/patient-links\//] } },
   // Mesma origem para a API (D-008): cookies first-party, sem CORS.
   async rewrites() {
     return [{ source: '/api/:path*', destination: `${apiUrl}/:path*` }];

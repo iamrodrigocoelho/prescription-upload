@@ -9,6 +9,19 @@
 receita.example.com {
 	encode zstd gzip
 
+	# Log de acesso sem credenciais: o token do link personalizado (/p/{token} e
+	# /api/public/patient-links/{token}) e query strings são mascarados (PRD §6.5).
+	log {
+		output file /var/log/caddy/receita-access.log
+		format filter {
+			request>uri regexp "^(/p/|/api/public/patient-links/)[^/?]+" "${1}[REDACTED]"
+			request>uri query delete *
+			request>headers>Cookie delete
+			request>headers>Authorization delete
+			request>headers>Referer delete
+		}
+	}
+
 	handle_path /api/* {
 		reverse_proxy api:4000 {
 			header_up X-Forwarded-For {remote_host}

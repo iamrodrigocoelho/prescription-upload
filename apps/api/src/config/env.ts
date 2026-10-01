@@ -59,6 +59,12 @@ export const envSchema = z
     LOCKOUT_BASE_SECONDS: z.coerce.number().int().positive().default(60),
     LOCKOUT_MAX_SECONDS: z.coerce.number().int().positive().default(1800),
 
+    // Área pública (PRD §10.3): consultas de contexto e envios por IP
+    PUBLIC_LOOKUP_RATE_LIMIT_POINTS: z.coerce.number().int().positive().default(120),
+    PUBLIC_LOOKUP_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
+    PUBLIC_SUBMIT_RATE_LIMIT_POINTS: z.coerce.number().int().positive().default(30),
+    PUBLIC_SUBMIT_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(900),
+
     // Senha e recuperação
     PASSWORD_MIN_LENGTH: z.coerce.number().int().min(8).default(12),
     PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().min(5).max(120).default(30),

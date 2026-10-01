@@ -13,7 +13,9 @@ export type LimiterName =
   | 'forgotPasswordEmail'
   | 'resetPasswordIp'
   | 'mfaSession'
-  | 'patientSearchUser';
+  | 'patientSearchUser'
+  | 'publicLookupIp'
+  | 'publicSubmitIp';
 
 /** Exceção de rate limit com o tempo de espera, usada para o header Retry-After. */
 export class RateLimitedError extends AppError {
@@ -48,6 +50,16 @@ export class RateLimitService {
       resetPasswordIp: make('reset-ip', 20, 900),
       mfaSession: make('mfa-session', 5, env.MFA_PENDING_TTL_MINUTES * 60),
       patientSearchUser: make('patient-search', 30, 60),
+      publicLookupIp: make(
+        'public-lookup-ip',
+        env.PUBLIC_LOOKUP_RATE_LIMIT_POINTS,
+        env.PUBLIC_LOOKUP_RATE_LIMIT_WINDOW_SECONDS,
+      ),
+      publicSubmitIp: make(
+        'public-submit-ip',
+        env.PUBLIC_SUBMIT_RATE_LIMIT_POINTS,
+        env.PUBLIC_SUBMIT_RATE_LIMIT_WINDOW_SECONDS,
+      ),
     };
   }
 
