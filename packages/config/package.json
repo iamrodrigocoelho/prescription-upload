@@ -1,0 +1,23 @@
+{
+  "name": "@receita/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./prettier": "./prettier/index.json",
+    "./eslint/base": "./eslint/base.js",
+    "./eslint/node": "./eslint/node.js",
+    "./tsconfig/base.json": "./tsconfig/base.json",
+    "./tsconfig/node.json": "./tsconfig/node.json",
+    "./tsconfig/nextjs.json": "./tsconfig/nextjs.json"
+  },
+  "dependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.0.0",
+    "typescript-eslint": "^8.71.0"
+  },
+  "peerDependencies": {
+    "eslint": "^10.0.0"
+  }
+}

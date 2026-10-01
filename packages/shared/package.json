@@ -1,0 +1,29 @@
+{
+  "name": "@receita/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@receita/config": "workspace:*",
+    "@types/node": "^24.19.0",
+    "eslint": "^10.11.0",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.2"
+  }
+}

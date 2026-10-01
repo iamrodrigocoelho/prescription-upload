@@ -1,0 +1,12 @@
+{
+  "extends": "@receita/config/tsconfig/node.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "strictPropertyInitialization": false,
+    "types": ["node", "vitest/globals"]
+  },
+  "include": ["src", "test", "prisma"]
+}

@@ -1,0 +1,63 @@
+# Infraestrutura local de desenvolvimento (somente open source).
+# Uso:  docker compose up -d
+# Valores lidos do `.env` na raiz (copie de .env.example).
+
+name: receita-venancio
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-receita}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-receita}
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Fork open source (BSD) do Redis, compatível no protocolo. Usado para rate limiting.
+  valkey:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    command: ['valkey-server', '--save', '', '--appendonly', 'no']
+    ports:
+      - '127.0.0.1:6379:6379'
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Object storage S3-compatible (Apache-2.0). Bucket privado; sem acesso anônimo.
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    restart: unless-stopped
+    entrypoint: ['/bin/sh', '/infra/start.sh']
+    environment:
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:?defina STORAGE_ACCESS_KEY no .env}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:?defina STORAGE_SECRET_KEY no .env}
+    ports:
+      - '127.0.0.1:8333:8333'
+    volumes:
+      - seaweedfs-data:/data
+      - ./infra/seaweedfs:/infra:ro
+
+  # Captura de e-mails em desenvolvimento. UI: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:1025:1025'
+      - '127.0.0.1:8025:8025'
+
+volumes:
+  postgres-data:
+  seaweedfs-data:
