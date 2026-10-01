@@ -41,6 +41,23 @@ describe('scrubSensitive', () => {
     expect(output.message).toBe('falha para ***.***.***-**');
   });
 
+  it('não altera UUIDs cujo bloco final contém 11 ou 12 dígitos', () => {
+    for (const uuid of [
+      '7188ddd3-045e-42a2-bca8-06220079670c',
+      '7188ddd3-045e-42a2-bca8-062200796701',
+      'a0000000-0000-4000-8000-52998224725f',
+    ]) {
+      expect(scrubString(uuid)).toBe(uuid);
+      expect(scrubSensitive({ removed: [uuid] })).toEqual({ removed: [uuid] });
+    }
+  });
+
+  it('continua mascarando CPF em texto livre, com ou sem pontuação', () => {
+    expect(scrubString('cpf 52998224725.')).toBe('cpf ***.***.***-**.');
+    expect(scrubString('(529.982.247-25)')).toBe('(***.***.***-**)');
+    expect(scrubString('cpf:52998224725')).toBe('cpf:***.***.***-**');
+  });
+
   it('não altera números que não são CPF', () => {
     expect(scrubString('pedido 12345 em 2026')).toBe('pedido 12345 em 2026');
   });

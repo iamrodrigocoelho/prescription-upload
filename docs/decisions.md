@@ -220,3 +220,18 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 - **Data:** 2026-10-01
 - **Contexto:** `eslint-plugin-react` 7.37 (via `eslint-config-next`) chama `context.getFilename`, removido no ESLint 10, ao detectar a versão do React.
 - **Decisão:** declarar `settings.react.version` explicitamente no `eslint.config.mjs` do web. Revisitar quando o plugin suportar ESLint 10.
+
+---
+
+# Fase 2 — Envio público
+
+## D-038 — Correção: mascaramento de CPF alterava UUIDs
+
+- **Data:** 2026-10-01
+- **Contexto:** o padrão de CPF do `scrubString` exigia apenas fronteira não numérica; blocos hexadecimais de UUID com 11 dígitos seguidos eram mascarados (ex.: `…-06220079670c` → `…-***.***.***-**c`), corrompendo IDs em logs e em `audit_logs.metadata` (append-only, irreversível). Falha intermitente detectada na Fase 2.
+- **Decisão:** a fronteira passa a ser não alfanumérica (`(?<![0-9A-Za-z])` / `(?![0-9A-Za-z])`). CPFs em texto livre continuam mascarados; testes cobrem UUIDs com 11/12 dígitos. Registros afetados existem apenas no banco de desenvolvimento local.
+
+## D-039 — Contexto público e loja inativa
+
+- **Data:** 2026-10-01
+- **Decisão:** `GET /public/stores/{slug}` retorna somente número, nome e `acceptsSubmissions`; loja inativa → `acceptsSubmissions: false` (a tela exibe a mensagem do DESIGN §6.10, CA-010); slug inexistente → 404 neutro. A busca pública lista apenas lojas ativas (até 20). No **link personalizado**, loja inativa continua indistinguível de link inválido (D-032, aprovado na Fase 2). `GET /public/patient-links/{token}` devolve apenas a loja e audita a abertura (`patient_link.opened`) sem o token. Rate limit por IP configurável (`PUBLIC_LOOKUP_*`, `PUBLIC_SUBMIT_*`); clientes no Wi-Fi da loja compartilham IP, por isso o limite de envio é generoso. Token mascarado também no log de acesso do Caddy e nos logs de requisição do `next dev`.

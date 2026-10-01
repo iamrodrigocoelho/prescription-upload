@@ -8,8 +8,9 @@ export const REDACTED = '[REDACTED]';
 const SENSITIVE_KEY =
   /^(.*password.*|.*token.*|.*secret.*|.*cpf.*|totp.*|otp|code|recoverycodes?|authorization|cookie|set-cookie)$/i;
 
-// CPF com ou sem máscara, isolado por fronteiras não numéricas.
-const CPF_PATTERN = /(?<!\d)\d{3}\.?\d{3}\.?\d{3}-?\d{2}(?!\d)/g;
+// CPF com ou sem máscara, isolado por fronteiras não alfanuméricas — dígitos
+// colados a letras (ex.: blocos hexadecimais de UUID) não são CPF (D-038).
+const CPF_PATTERN = /(?<![0-9A-Za-z])\d{3}\.?\d{3}\.?\d{3}-?\d{2}(?![0-9A-Za-z])/g;
 
 const MAX_DEPTH = 8;
 
