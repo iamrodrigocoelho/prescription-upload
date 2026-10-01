@@ -3,3 +3,6 @@ export * from './cpf.js';
 export * from './mask.js';
 export * from './errors.js';
 export * from './schemas/settings.js';
+export * from './password-policy.js';
+export * from './schemas/common.js';
+export * from './schemas/auth.js';

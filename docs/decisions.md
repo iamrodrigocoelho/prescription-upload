@@ -118,3 +118,36 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 - **Data:** 2026-10-01
 - **Contexto:** o Prisma bloqueia `migrate reset` quando executado por agente de IA sem consentimento explícito.
 - **Decisão:** a suíte e2e aplica migrations com `prisma migrate deploy` (não destrutivo) e limpa dados com `TRUNCATE` entre suítes; só roda em bancos cujo nome termina em `_test`. `pnpm db:reset` continua disponível para uso humano.
+
+---
+
+## D-021 — Sessões server-side e cookie
+
+- **Data:** 2026-10-01
+- **Decisão:** token opaco de 32 bytes (CSPRNG) no cookie `__Host-rv_session` (`rv_session` em dev sem TLS), `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, sem `Max-Age` (cookie de sessão do navegador). O banco guarda só o SHA-256. Expiração por inatividade (30 min) e absoluta (12 h), configuráveis; renovação deslizante no máximo 1×/min. Após a verificação TOTP ou a configuração obrigatória de 2FA, a sessão é **rotacionada** (novo token; a anterior revogada) para impedir fixação de sessão. Sessões são revogadas em logout, redefinição de senha, ativação de 2FA (demais sessões), desativação de usuário e por ação do Admin.
+- **Descartado:** JWT em cookie (não revogável sem lista de bloqueio).
+
+## D-022 — Proteção CSRF
+
+- **Data:** 2026-10-01
+- **Decisão:** em todo método que altera estado: (1) `Origin`, se presente, deve ser igual à origem de `PUBLIC_APP_URL`; (2) `Sec-Fetch-Site: cross-site` é rejeitado; (3) com sessão, header `X-CSRF-Token` = HMAC(SESSION_SECRET, sessionId), comparado em tempo constante. O token é entregue no login, na verificação 2FA e em `GET /auth/me`, e muda a cada rotação de sessão.
+
+## D-023 — Login sem enumeração e com bloqueio progressivo
+
+- **Data:** 2026-10-01
+- **Decisão:** resposta única `401 INVALID_CREDENTIALS` para usuário inexistente, inativo, sem senha, bloqueado ou senha errada — inclusive quando a conta está bloqueada e a senha está correta. Para usuário inexistente, um Argon2 contra hash fictício iguala o tempo. Bloqueio por conta: 5 falhas → 60 s, dobrando até 30 min; zera no sucesso. Rate limit por IP (10 falhas/15 min) com `429` + `Retry-After`. Falhas de 2FA também contam para o bloqueio; 5 códigos inválidos descartam a sessão intermediária. A auditoria registra o motivo interno da falha (sem e-mail digitado nem senha).
+
+## D-024 — TOTP
+
+- **Data:** 2026-10-01
+- **Decisão:** otplib 13 (RFC 6238, SHA-1/30 s/6 dígitos — compatível com Google Authenticator), tolerância de ±1 período. Proteção contra replay: o último time-step aceito é gravado com update condicional; um código nunca é aceito duas vezes. 10 códigos de recuperação de 10 caracteres (alfabeto sem ambíguos, ~50 bits), uso único, hash vinculado ao usuário. Desativar exige senha + código e é bloqueado quando o 2FA é obrigatório. A configuração obrigatória tem janela de 15 min; a verificação no login, `MFA_PENDING_TTL_MINUTES` (5).
+
+## D-025 — Recuperação de senha
+
+- **Data:** 2026-10-01
+- **Decisão:** `POST /auth/forgot-password` sempre responde `202` com a mesma mensagem e processa em segundo plano (tempo de resposta igual para e-mail existente ou não). Rate limit por IP (10/h) e por e-mail (3/h, chave HMAC do e-mail). Token de 32 bytes, 30 min, uso único (consumo condicional), apenas hash persistido; nova solicitação invalida a anterior. O link usa **fragmento** (`/redefinir-senha#token=…`), que não é enviado ao servidor nem vaza por `Referer`/logs. A redefinição invalida todas as sessões. Convites usam o mesmo mecanismo (`purpose = INVITE`, 72 h, `/definir-senha#token=…`).
+
+## D-026 — `Cache-Control: no-store` em toda a API
+
+- **Data:** 2026-10-01
+- **Decisão:** toda resposta da API é marcada `no-store` (dados pessoais e de saúde não devem ficar em caches de navegador ou proxy).

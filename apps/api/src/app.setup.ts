@@ -47,5 +47,12 @@ export function configureApp(app: INestApplication): void {
     }),
   );
   app.use(cookieParser());
+  // Respostas da API contêm dados sensíveis: nunca devem ser armazenadas em cache.
+  app.use(
+    (_req: unknown, res: { setHeader(name: string, value: string): void }, next: () => void) => {
+      res.setHeader('Cache-Control', 'no-store');
+      next();
+    },
+  );
   app.enableShutdownHooks();
 }

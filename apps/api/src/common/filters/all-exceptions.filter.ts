@@ -39,6 +39,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof AppError) {
       status = exception.getStatus();
       body = { code: exception.code, message: exception.message, issues: exception.issues };
+      for (const [name, value] of Object.entries(exception.headers ?? {})) {
+        response.setHeader(name, value);
+      }
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
       const code = STATUS_TO_CODE[status] ?? ApiErrorCode.INTERNAL_ERROR;

@@ -7,6 +7,10 @@ import { buildLoggerParams } from './common/logging/logger.config.js';
 import { ConfigModule, ENV } from './config/config.module.js';
 import type { Env } from './config/env.js';
 import { CryptoModule } from './infra/crypto/crypto.module.js';
+import { MailModule } from './infra/mail/mail.module.js';
+import { RateLimitModule } from './infra/rate-limit/rate-limit.module.js';
+import { RedisModule } from './infra/redis/redis.module.js';
+import { AuthModule } from './modules/auth/auth.module.js';
 import { PrismaModule } from './infra/prisma/prisma.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { HealthModule } from './modules/health/health.module.js';
@@ -21,7 +25,11 @@ import { SettingsModule } from './modules/settings/settings.module.js';
     }),
     PrismaModule,
     CryptoModule,
+    RedisModule,
+    RateLimitModule,
+    MailModule,
     AuditModule,
+    AuthModule,
     HealthModule,
     SettingsModule,
   ],

@@ -1,15 +1,22 @@
-import { Controller, Get, Header, HttpCode, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Get, Header, HttpCode, HttpStatus, Inject, Logger } from '@nestjs/common';
 import { ApiErrorCode } from '@receita/shared';
+import type { Redis } from 'ioredis';
+import { Public } from '../../common/auth/decorators.js';
 import { AppError } from '../../common/errors.js';
+import { REDIS } from '../../infra/redis/redis.module.js';
 import { PrismaService } from '../../infra/prisma/prisma.service.js';
 
 type CheckResult = 'ok' | 'fail';
 
 @Controller('health')
+@Public()
 export class HealthController {
   private readonly logger = new Logger(HealthController.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(REDIS) private readonly redis: Redis,
+  ) {}
 
   /** Liveness: o processo está de pé. Não toca dependências externas. */
   @Get()
@@ -26,6 +33,9 @@ export class HealthController {
     const checks: Record<string, CheckResult> = {
       database: await this.check('database', async () => {
         await this.prisma.$queryRaw`SELECT 1`;
+      }),
+      redis: await this.check('redis', async () => {
+        await this.redis.ping();
       }),
     };
     if (Object.values(checks).some((value) => value === 'fail')) {

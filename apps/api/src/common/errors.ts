@@ -46,6 +46,8 @@ export class AppError extends HttpException {
     readonly code: ApiErrorCode,
     message?: string,
     readonly issues?: ApiErrorIssue[],
+    /** Headers extras da resposta (ex.: Retry-After). */
+    readonly headers?: Record<string, string>,
   ) {
     super(message ?? DEFAULT_MESSAGES[code], STATUS[code]);
   }
