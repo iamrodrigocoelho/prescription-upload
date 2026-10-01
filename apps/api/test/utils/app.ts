@@ -6,13 +6,16 @@ import { configureApp } from '../../src/app.setup.js';
 import { MailProvider } from '../../src/infra/mail/mail.provider.js';
 import { PrismaService } from '../../src/infra/prisma/prisma.service.js';
 import { REDIS } from '../../src/infra/redis/redis.module.js';
+import { CaptchaVerifier } from '../../src/modules/captcha/captcha.verifier.js';
 import { resetDatabase } from './db.js';
+import { FakeCaptchaVerifier } from './fake-captcha.js';
 import { InMemoryMailProvider } from './in-memory-mail.js';
 
 export interface TestContext {
   app: INestApplication;
   prisma: PrismaService;
   mail: InMemoryMailProvider;
+  captcha: FakeCaptchaVerifier;
   /** Limpa banco (exceto audit_logs), chaves de rate limit e e-mails capturados. */
   reset(): Promise<void>;
 }
@@ -24,9 +27,12 @@ export async function createTestApp(): Promise<INestApplication> {
 
 export async function createTestContext(): Promise<TestContext> {
   const mail = new InMemoryMailProvider();
+  const captcha = new FakeCaptchaVerifier();
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(MailProvider)
     .useValue(mail)
+    .overrideProvider(CaptchaVerifier)
+    .useValue(captcha)
     .compile();
   const app = moduleRef.createNestApplication({ bodyParser: false, bufferLogs: true });
   configureApp(app);
@@ -39,6 +45,7 @@ export async function createTestContext(): Promise<TestContext> {
     app,
     prisma,
     mail,
+    captcha,
     async reset() {
       await resetDatabase(prisma);
       const keys = await redis.keys(`${process.env.REDIS_KEY_PREFIX ?? 'rv-test:'}*`);

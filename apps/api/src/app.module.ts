@@ -8,10 +8,13 @@ import { ConfigModule, ENV } from './config/config.module.js';
 import type { Env } from './config/env.js';
 import { CryptoModule } from './infra/crypto/crypto.module.js';
 import { MailModule } from './infra/mail/mail.module.js';
+import { HttpMetricsMiddleware } from './infra/metrics/http-metrics.middleware.js';
+import { MetricsModule } from './infra/metrics/metrics.module.js';
 import { RateLimitModule } from './infra/rate-limit/rate-limit.module.js';
 import { RedisModule } from './infra/redis/redis.module.js';
 import { StorageModule } from './infra/storage/storage.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { CaptchaModule } from './modules/captcha/captcha.module.js';
 import { PrismaModule } from './infra/prisma/prisma.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { HealthModule } from './modules/health/health.module.js';
@@ -35,6 +38,8 @@ import { UsersModule } from './modules/users/users.module.js';
     RateLimitModule,
     MailModule,
     StorageModule,
+    MetricsModule,
+    CaptchaModule,
     AuditModule,
     AuthModule,
     HealthModule,
@@ -49,6 +54,6 @@ import { UsersModule } from './modules/users/users.module.js';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(RequestContextMiddleware).forRoutes('*path');
+    consumer.apply(RequestContextMiddleware, HttpMetricsMiddleware).forRoutes('*path');
   }
 }

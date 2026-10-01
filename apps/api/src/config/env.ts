@@ -11,6 +11,9 @@ const key32 = z.string().refine((value) => Buffer.from(value, 'base64').length =
 
 const secret = z.string().min(32, 'deve ter ao menos 32 caracteres');
 
+/** Chave secreta de teste pública do Google (sempre aprova). Proibida em produção. */
+export const GOOGLE_TEST_SECRET = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe';
+
 export const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -78,6 +81,27 @@ export const envSchema = z
     SMTP_PASSWORD: z.string().optional(),
     MAIL_FROM: z.string().min(3),
 
+    // reCAPTCHA v2 checkbox (PRD §10). Dev/teste: chaves de teste oficiais do Google.
+    RECAPTCHA_SECRET_KEY: z.string().min(1),
+    /** Hostnames aceitos na resposta do siteverify (separados por vírgula). */
+    RECAPTCHA_EXPECTED_HOSTNAMES: z
+      .string()
+      .min(1)
+      .transform((value) =>
+        value
+          .split(',')
+          .map((h) => h.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    RECAPTCHA_VERIFY_URL: z.url().default('https://www.google.com/recaptcha/api/siteverify'),
+    RECAPTCHA_TIMEOUT_MS: z.coerce.number().int().min(500).max(15_000).default(5000),
+
+    // Métricas Prometheus. Sem token, o endpoint /metrics fica desabilitado.
+    METRICS_TOKEN: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z.string().min(32).optional(),
+    ),
+
     // Pacientes
     PATIENT_PROVIDER: z.enum(['mock', 'none']).default('none'),
 
@@ -97,6 +121,20 @@ export const envSchema = z
           code: 'custom',
           path: ['PATIENT_PROVIDER'],
           message: 'o provider mock é proibido em produção',
+        });
+      }
+      if (env.RECAPTCHA_SECRET_KEY === GOOGLE_TEST_SECRET) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['RECAPTCHA_SECRET_KEY'],
+          message: 'a chave de teste do reCAPTCHA é proibida em produção',
+        });
+      }
+      if (env.RECAPTCHA_EXPECTED_HOSTNAMES.includes('testkey.google.com')) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['RECAPTCHA_EXPECTED_HOSTNAMES'],
+          message: 'testkey.google.com é proibido em produção',
         });
       }
       if (!env.COOKIE_SECURE) {

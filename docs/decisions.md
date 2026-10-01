@@ -235,3 +235,14 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 
 - **Data:** 2026-10-01
 - **Decisão:** `GET /public/stores/{slug}` retorna somente número, nome e `acceptsSubmissions`; loja inativa → `acceptsSubmissions: false` (a tela exibe a mensagem do DESIGN §6.10, CA-010); slug inexistente → 404 neutro. A busca pública lista apenas lojas ativas (até 20). No **link personalizado**, loja inativa continua indistinguível de link inválido (D-032, aprovado na Fase 2). `GET /public/patient-links/{token}` devolve apenas a loja e audita a abertura (`patient_link.opened`) sem o token. Rate limit por IP configurável (`PUBLIC_LOOKUP_*`, `PUBLIC_SUBMIT_*`); clientes no Wi-Fi da loja compartilham IP, por isso o limite de envio é generoso. Token mascarado também no log de acesso do Caddy e nos logs de requisição do `next dev`.
+
+## D-040 — Captcha (reCAPTCHA v2 checkbox)
+
+- **Data:** 2026-10-01
+- **Decisão:** interface `CaptchaVerifier` com adapter `RecaptchaV2Verifier` (PRD §10.4); trocar por reCAPTCHA Enterprise = novo adapter, sem mudar o domínio. A verificação exige `success`, hostname em `RECAPTCHA_EXPECTED_HOSTNAMES` e token **não reutilizado**: o hash do token é reservado no Redis (`SET NX`, 5 min) **antes** da chamada ao Google — necessário porque as chaves de teste sempre aprovam e para barrar reuso concorrente. Indisponibilidade do Google → falha fechada (envio recusado). Falhas geram log de segurança (`captcha_rejected` + motivo) e a métrica `captcha_verifications_total{result}`, sem dados pessoais. Dev/teste usam as chaves de teste oficiais (hostname `testkey.google.com`); a API recusa a chave de teste e esse hostname em produção. Os testes e2e da API usam um verificador falso offline; o adapter real tem testes unitários com `fetch` simulado.
+- **Pendente (DPO):** o reCAPTCHA envia IP e cookies ao Google — validar base legal e menção no aviso de privacidade.
+
+## D-041 — Métricas Prometheus
+
+- **Data:** 2026-10-01
+- **Decisão:** `prom-client` com `GET /metrics` exigindo `Authorization: Bearer METRICS_TOKEN` (sem token configurado o endpoint responde 404); exposto apenas na rede interna. Latência por **template** de rota (`/public/patient-links/:token`), nunca a URL concreta; contadores de captcha, envios, arquivos aceitos/rejeitados, falhas de storage e eventos de segurança, apenas com labels categóricos.
