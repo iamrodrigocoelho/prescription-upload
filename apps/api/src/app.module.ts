@@ -1,6 +1,7 @@
 import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
+import { DomainEventsModule } from './common/events/domain-events.js';
 import { RequestContextMiddleware } from './common/context/request-context.middleware.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { buildLoggerParams } from './common/logging/logger.config.js';
@@ -15,6 +16,8 @@ import { RedisModule } from './infra/redis/redis.module.js';
 import { StorageModule } from './infra/storage/storage.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CaptchaModule } from './modules/captcha/captcha.module.js';
+import { MalwareModule } from './modules/malware/malware.module.js';
+import { SubmissionsModule } from './modules/submissions/submissions.module.js';
 import { PrismaModule } from './infra/prisma/prisma.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { HealthModule } from './modules/health/health.module.js';
@@ -40,6 +43,8 @@ import { UsersModule } from './modules/users/users.module.js';
     StorageModule,
     MetricsModule,
     CaptchaModule,
+    MalwareModule,
+    DomainEventsModule,
     AuditModule,
     AuthModule,
     HealthModule,
@@ -49,6 +54,7 @@ import { UsersModule } from './modules/users/users.module.js';
     PatientsModule,
     PatientLinksModule,
     PublicModule,
+    SubmissionsModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
 })

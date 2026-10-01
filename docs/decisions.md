@@ -257,3 +257,19 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 
 - **Data:** 2026-10-01
 - **Decisão:** interface `MalwareScanner` com adapter no-op; arquivos nascem com `malware_scan_status = PENDING`. Estratégia real pendente (PRD §42, item 12). A Fase 3 deve tratar PDFs com cautela no visualizador enquanto não houver varredura.
+
+## D-044 — Idempotência do envio
+
+- **Data:** 2026-10-01
+- **Decisão:** header `Idempotency-Key` (16–128 caracteres `[A-Za-z0-9_-]`), gerado pelo cliente **por tentativa de envio** e reaproveitado em "Tentar novamente". Guardado só como hash (`sha256(escopo:chave)`; escopo = endpoint público ou hash do token do link) no Redis por 24 h: `processing` (reservado com `SET NX`) → `done` após o commit. Repetição com `done` devolve a mesma resposta `201 {status:"RECEIVED"}` sem ler o corpo nem criar receita; com `processing` → `409`; falha → chave liberada. O hash também vai para `prescription_submissions.idempotency_key` (único) como garantia caso o Redis perca o estado. Sem o header, o envio é processado normalmente (sem deduplicação).
+
+## D-045 — Ordem do consumo do link na transação
+
+- **Data:** 2026-10-01
+- **Contexto:** criar a receita (FK para o link → lock compartilhado na linha) e depois atualizar o link causava **deadlock** entre envios concorrentes com o mesmo link (500 em vez do erro neutro), detectado nos testes.
+- **Decisão:** `PatientLinkAccessService.consumeWithin` reivindica o link primeiro (update condicional `ACTIVE → USED`, que bloqueia a linha), cria a receita e só então grava `used_submission_id` e audita. O envio concorrente espera o lock, reavalia a condição e recebe `LINK_UNAVAILABLE`; nada é gravado e seus objetos são removidos. Falhas de captcha, arquivo ou storage acontecem antes da transação e nunca consomem o link.
+
+## D-046 — Envio: regras de identificação, canal e eventos
+
+- **Data:** 2026-10-01
+- **Decisão:** público/genérico → `identification_status = NOT_IDENTIFIED` com ou sem CPF (identificação automática fica para a Fase 4); `source_channel = STORE_LINK` (slug) ou `GENERIC` (loja escolhida, validada como ativa). Link personalizado → aceita **apenas** `captchaToken`; qualquer outro campo (store_id, cpf, patient_id…) → `400` + auditoria `security.personalized_link_tampering` (só os nomes dos campos) + métrica. Receita nasce `RECEIVED`, com `status_history` inicial, `retention_until = agora + retention_days`, arquivos `PENDING` e, no link personalizado, `PatientLinkHistory(PERSONALIZED_LINK)`. Após o commit: `MalwareScanner.enqueue` (no-op) e evento `prescription.submitted {submissionId, storeId}` num barramento em processo (`DomainEventBus`) — a Fase 3 deve trocá-lo por Redis pub/sub/outbox. Metadados de auditoria evitam nomes de chave contendo "cpf" (seriam redigidos pela proteção de logs): usa-se `documentProvided`.

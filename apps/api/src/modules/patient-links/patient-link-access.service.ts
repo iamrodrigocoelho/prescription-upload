@@ -59,6 +59,44 @@ export class PatientLinkAccessService {
   }
 
   /**
+   * Consumo dentro da transação que cria a receita (Fase 2). Ordem importa: o link
+   * é REIVINDICADO primeiro (update condicional, que bloqueia a linha); só então a
+   * receita é criada e associada. Criar a receita antes (FK para o link) e depois
+   * atualizar o link causa deadlock entre envios concorrentes.
+   * Se o link já não estiver ativo, lança o erro neutro e a transação é desfeita.
+   */
+  async consumeWithin<T extends { id: string }>(
+    tx: Prisma.TransactionClient,
+    linkId: string,
+    createSubmission: () => Promise<T>,
+  ): Promise<T> {
+    const now = new Date();
+    const claimed = await tx.patientUploadLink.updateMany({
+      where: { id: linkId, status: 'ACTIVE', expiresAt: { gt: now } },
+      data: { status: 'USED', usedAt: now },
+    });
+    if (claimed.count !== 1) throw unavailable();
+
+    const submission = await createSubmission();
+    const link = await tx.patientUploadLink.update({
+      where: { id: linkId },
+      data: { usedSubmissionId: submission.id },
+    });
+    await this.audit.record(
+      {
+        action: AuditAction.PATIENT_LINK_CONSUMED,
+        entityType: 'PatientUploadLink',
+        entityId: linkId,
+        storeId: link.storeId,
+        actor: { userId: null, role: null },
+        metadata: { submissionId: submission.id },
+      },
+      tx,
+    );
+    return submission;
+  }
+
+  /**
    * Marca o link como utilizado após um envio bem-sucedido (uso único, RF-035).
    * Atômico: update condicional — dois envios concorrentes não consomem o mesmo link.
    * Idempotente: repetir com o mesmo `submissionId` retorna `already_consumed`.

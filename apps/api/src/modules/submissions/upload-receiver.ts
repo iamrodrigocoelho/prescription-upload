@@ -85,7 +85,9 @@ export async function receiveUpload(
       defParamCharset: 'utf8',
       limits: {
         files: MAX_FILES,
-        fileSize: MAX_FILE_BYTES,
+        // +1: o busboy sinaliza truncamento ao atingir o limite; o tamanho real é
+        // verificado no stream (exatamente 5 MB é aceito, 5 MB + 1 byte não).
+        fileSize: MAX_FILE_BYTES + 1,
         fields: MAX_TEXT_FIELDS,
         fieldSize: MAX_FIELD_BYTES,
         parts: MAX_FILES + MAX_TEXT_FIELDS,
@@ -126,6 +128,11 @@ export async function receiveUpload(
       headLength += next.value.length;
     }
     const head = Buffer.concat(headChunks);
+    if (head.length > MAX_FILE_BYTES) {
+      options.onFileRejected?.('too_large');
+      stream.resume();
+      throw tooLarge(index);
+    }
     const check = await checkFile(filename, head.subarray(0, DETECTION_BYTES));
     if (!check.ok) {
       options.onFileRejected?.(check.reason);
@@ -148,6 +155,7 @@ export async function receiveUpload(
             if (next.done) break;
             hash.update(next.value);
             size += next.value.length;
+            if (size > MAX_FILE_BYTES) throw tooLarge(index);
             yield next.value;
           }
         }

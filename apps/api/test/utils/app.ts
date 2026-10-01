@@ -25,15 +25,20 @@ export async function createTestApp(): Promise<INestApplication> {
   return (await createTestContext()).app;
 }
 
-export async function createTestContext(): Promise<TestContext> {
+export async function createTestContext(
+  overrides: { provide: unknown; useValue: unknown }[] = [],
+): Promise<TestContext> {
   const mail = new InMemoryMailProvider();
   const captcha = new FakeCaptchaVerifier();
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+  let builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(MailProvider)
     .useValue(mail)
     .overrideProvider(CaptchaVerifier)
-    .useValue(captcha)
-    .compile();
+    .useValue(captcha);
+  for (const override of overrides) {
+    builder = builder.overrideProvider(override.provide).useValue(override.useValue);
+  }
+  const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication({ bodyParser: false, bufferLogs: true });
   configureApp(app);
   await app.init();

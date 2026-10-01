@@ -10,7 +10,7 @@ export async function resetDatabase(prisma: PrismaService): Promise<void> {
       "patient_link_history", "status_history", "prescription_files",
       "patient_upload_links", "prescription_submissions",
       "totp_recovery_codes", "password_reset_tokens", "sessions",
-      "user_store_access", "users", "stores"
+      "user_store_access", "users", "stores", "orphaned_objects"
     RESTART IDENTITY CASCADE
   `);
   // O CASCADE alcança system_settings (FK updated_by_user_id): reinsere os padrões.
