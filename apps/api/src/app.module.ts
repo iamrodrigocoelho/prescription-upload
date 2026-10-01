@@ -6,7 +6,11 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { buildLoggerParams } from './common/logging/logger.config.js';
 import { ConfigModule, ENV } from './config/config.module.js';
 import type { Env } from './config/env.js';
+import { CryptoModule } from './infra/crypto/crypto.module.js';
+import { PrismaModule } from './infra/prisma/prisma.module.js';
+import { AuditModule } from './modules/audit/audit.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { SettingsModule } from './modules/settings/settings.module.js';
 
 @Module({
   imports: [
@@ -15,7 +19,11 @@ import { HealthModule } from './modules/health/health.module.js';
       inject: [ENV],
       useFactory: (env: Env) => buildLoggerParams(env),
     }),
+    PrismaModule,
+    CryptoModule,
+    AuditModule,
     HealthModule,
+    SettingsModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
 })

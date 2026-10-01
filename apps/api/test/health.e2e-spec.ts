@@ -49,3 +49,20 @@ describe('Health e headers de segurança (e2e)', () => {
     expect(res.body.error.requestId).toBe(res.headers['x-request-id']);
   });
 });
+
+describe('Readiness (e2e)', () => {
+  let app: INestApplication;
+
+  beforeAll(async () => {
+    app = await createTestApp();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('GET /health/ready verifica o banco', async () => {
+    const res = await request(app.getHttpServer()).get('/health/ready').expect(200);
+    expect(res.body).toEqual({ status: 'ok', checks: { database: 'ok' } });
+  });
+});

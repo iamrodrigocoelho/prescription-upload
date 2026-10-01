@@ -1,0 +1,386 @@
+// Modelo de dados do Receita Venancio (PRD §25).
+// Convenções: tabelas e colunas em snake_case; IDs UUID (não sequenciais);
+// timestamps com fuso (timestamptz). Restrições que o Prisma não expressa
+// (CHECKs, trigger append-only do audit_logs) ficam no SQL das migrations.
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "esm"
+  importFileExtension    = "js"
+  generatedFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// -----------------------------------------------------------------------------
+// Enums (espelhados em packages/shared/src/enums.ts)
+// -----------------------------------------------------------------------------
+
+enum Role {
+  STORE_COLLABORATOR
+  MANAGER
+  ADMIN
+}
+
+enum OperationalStatus {
+  RECEIVED
+  IN_REVIEW
+  IN_SERVICE
+  FINISHED
+  CANCELLED
+  NOT_SERVED
+}
+
+enum IdentificationStatus {
+  NOT_IDENTIFIED
+  IDENTIFIED_AUTO_CPF
+  IDENTIFIED_MANUAL
+  IDENTIFIED_PERSONALIZED_LINK
+}
+
+enum SourceChannel {
+  GENERIC
+  STORE_LINK
+  PERSONALIZED_LINK
+}
+
+/// Status persistido. "Expirado" é derivado de expires_at na leitura.
+enum PatientUploadLinkStatus {
+  ACTIVE
+  USED
+  REVOKED
+}
+
+enum PatientLinkType {
+  AUTOMATIC_CPF
+  MANUAL
+  PERSONALIZED_LINK
+}
+
+enum MalwareScanStatus {
+  PENDING
+  CLEAN
+  INFECTED
+  FAILED
+}
+
+enum SessionState {
+  /// Senha validada; aguardando código TOTP.
+  PENDING_MFA
+  /// Senha validada; usuário obrigado a configurar 2FA antes de prosseguir.
+  MFA_ENROLLMENT_REQUIRED
+  ACTIVE
+}
+
+enum PasswordTokenPurpose {
+  RESET
+  INVITE
+}
+
+enum AuditResult {
+  SUCCESS
+  FAILURE
+  DENIED
+}
+
+// -----------------------------------------------------------------------------
+// Lojas e usuários
+// -----------------------------------------------------------------------------
+
+model Store {
+  id           String   @id @default(uuid()) @db.Uuid
+  storeNumber  String   @unique @map("store_number") @db.VarChar(20)
+  storeName    String   @map("store_name") @db.VarChar(200)
+  /// Identificador público não sequencial usado em /l/{slug}.
+  publicSlug   String   @unique @map("public_slug") @db.VarChar(32)
+  active       Boolean  @default(true)
+  address      String?  @db.VarChar(300)
+  neighborhood String?  @db.VarChar(120)
+  city         String?  @db.VarChar(120)
+  state        String?  @db.Char(2)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  userAccess     UserStoreAccess[]
+  patientLinks   PatientUploadLink[]
+  submissions    PrescriptionSubmission[]
+
+  @@index([active])
+  @@map("stores")
+}
+
+model User {
+  id                         String    @id @default(uuid()) @db.Uuid
+  name                       String    @db.VarChar(200)
+  /// Sempre normalizado em minúsculas (CHECK no banco).
+  email                      String    @unique @db.VarChar(254)
+  /// Argon2id. Nulo até o usuário definir a senha pelo convite.
+  passwordHash               String?   @map("password_hash")
+  role                       Role
+  active                     Boolean   @default(true)
+  totpEnabled                Boolean   @default(false) @map("totp_enabled")
+  /// AES-256-GCM (chave TOTP_ENCRYPTION_KEY).
+  totpSecretEncrypted        String?   @map("totp_secret_encrypted")
+  /// Segredo gerado no setup, ainda não confirmado com um código válido.
+  totpPendingSecretEncrypted String?   @map("totp_pending_secret_encrypted")
+  /// Admin pode exigir 2FA por usuário (padrão true para ADMIN).
+  totpRequired               Boolean   @default(false) @map("totp_required")
+  /// Último time-step TOTP aceito — impede reutilização do mesmo código.
+  totpLastUsedStep           BigInt?   @map("totp_last_used_step")
+  failedLoginCount           Int       @default(0) @map("failed_login_count")
+  lockedUntil                DateTime? @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt                DateTime? @map("last_login_at") @db.Timestamptz(3)
+  passwordChangedAt          DateTime? @map("password_changed_at") @db.Timestamptz(3)
+  createdAt                  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  storeAccess         UserStoreAccess[]       @relation("UserStoreAccessUser")
+  grantedStoreAccess  UserStoreAccess[]       @relation("UserStoreAccessGrantedBy")
+  sessions            Session[]
+  passwordTokens      PasswordResetToken[]
+  recoveryCodes       TotpRecoveryCode[]
+  createdLinks        PatientUploadLink[]     @relation("PatientLinkCreatedBy")
+  revokedLinks        PatientUploadLink[]     @relation("PatientLinkRevokedBy")
+  statusChanges       StatusHistory[]
+  patientLinkHistory  PatientLinkHistory[]
+  settingsUpdated     SystemSetting[]
+
+  @@index([role])
+  @@map("users")
+}
+
+/// Escopo de lojas do usuário (Colaborador: suas lojas; Gestor: lojas sob sua responsabilidade).
+model UserStoreAccess {
+  userId          String   @map("user_id") @db.Uuid
+  storeId         String   @map("store_id") @db.Uuid
+  createdByUserId String?  @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user      User  @relation("UserStoreAccessUser", fields: [userId], references: [id], onDelete: Cascade)
+  store     Store @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  createdBy User? @relation("UserStoreAccessGrantedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@id([userId, storeId])
+  @@index([storeId])
+  @@map("user_store_access")
+}
+
+// -----------------------------------------------------------------------------
+// Autenticação (entidades técnicas — ver docs/decisions.md)
+// -----------------------------------------------------------------------------
+
+/// Sessão server-side revogável. O cookie carrega um token opaco; aqui só o hash.
+model Session {
+  id                String       @id @default(uuid()) @db.Uuid
+  userId            String       @map("user_id") @db.Uuid
+  tokenHash         String       @unique @map("token_hash") @db.Char(64)
+  state             SessionState
+  ipAddress         String?      @map("ip_address") @db.VarChar(64)
+  userAgent         String?      @map("user_agent") @db.VarChar(256)
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastSeenAt        DateTime     @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  idleExpiresAt     DateTime     @map("idle_expires_at") @db.Timestamptz(3)
+  absoluteExpiresAt DateTime     @map("absolute_expires_at") @db.Timestamptz(3)
+  revokedAt         DateTime?    @map("revoked_at") @db.Timestamptz(3)
+  revokedReason     String?      @map("revoked_reason") @db.VarChar(64)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@map("sessions")
+}
+
+/// Token de uso único para redefinição de senha ou convite. Só o hash é persistido.
+model PasswordResetToken {
+  id        String               @id @default(uuid()) @db.Uuid
+  userId    String               @map("user_id") @db.Uuid
+  tokenHash String               @unique @map("token_hash") @db.Char(64)
+  purpose   PasswordTokenPurpose
+  expiresAt DateTime             @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime?            @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+/// Códigos de recuperação do 2FA, de uso único. Só o hash é persistido.
+model TotpRecoveryCode {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  codeHash  String    @unique @map("code_hash") @db.Char(64)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("totp_recovery_codes")
+}
+
+// -----------------------------------------------------------------------------
+// Links personalizados (PRD §6.4, §17)
+// -----------------------------------------------------------------------------
+
+model PatientUploadLink {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  storeId            String                  @map("store_id") @db.Uuid
+  patientExternalId  String                  @map("patient_external_id") @db.VarChar(128)
+  /// Rótulo já mascarado para listagem (ex.: "João S. · CPF ***.***.***-12").
+  patientDisplayLabel String                 @map("patient_display_label") @db.VarChar(200)
+  /// SHA-256 do token. O token em texto puro nunca é persistido.
+  tokenHash          String                  @unique @map("token_hash") @db.Char(64)
+  status             PatientUploadLinkStatus @default(ACTIVE)
+  createdByUserId    String                  @map("created_by_user_id") @db.Uuid
+  expiresAt          DateTime                @map("expires_at") @db.Timestamptz(3)
+  usedAt             DateTime?               @map("used_at") @db.Timestamptz(3)
+  /// Envio que consumiu o link — garante consumo idempotente.
+  usedSubmissionId   String?                 @unique @map("used_submission_id") @db.Uuid
+  revokedAt          DateTime?               @map("revoked_at") @db.Timestamptz(3)
+  revokedByUserId    String?                 @map("revoked_by_user_id") @db.Uuid
+  createdAt          DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  store          Store                    @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  createdBy      User                     @relation("PatientLinkCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  revokedBy      User?                    @relation("PatientLinkRevokedBy", fields: [revokedByUserId], references: [id], onDelete: Restrict)
+  usedSubmission PrescriptionSubmission?  @relation("PatientLinkUsedBy", fields: [usedSubmissionId], references: [id], onDelete: Restrict)
+  submissions    PrescriptionSubmission[] @relation("SubmissionPatientLink")
+
+  @@index([storeId, createdAt])
+  @@index([status, expiresAt])
+  @@map("patient_upload_links")
+}
+
+// -----------------------------------------------------------------------------
+// Receitas (usadas a partir da Fase 2)
+// -----------------------------------------------------------------------------
+
+model PrescriptionSubmission {
+  id                   String               @id @default(uuid()) @db.Uuid
+  storeId              String               @map("store_id") @db.Uuid
+  /// AES-256-GCM (chave CPF_ENCRYPTION_KEY).
+  cpfEncrypted         String?              @map("cpf_encrypted")
+  /// HMAC-SHA256 com pepper, para busca exata sem descriptografar.
+  cpfHashForLookup     String?              @map("cpf_hash_for_lookup") @db.Char(64)
+  operationalStatus    OperationalStatus    @default(RECEIVED) @map("operational_status")
+  identificationStatus IdentificationStatus @default(NOT_IDENTIFIED) @map("identification_status")
+  patientExternalId    String?              @map("patient_external_id") @db.VarChar(128)
+  sourceChannel        SourceChannel        @map("source_channel")
+  patientUploadLinkId  String?              @map("patient_upload_link_id") @db.Uuid
+  /// Chave de idempotência do envio público (RNF-012).
+  idempotencyKey       String?              @unique @map("idempotency_key") @db.VarChar(64)
+  firstViewedAt        DateTime?            @map("first_viewed_at") @db.Timestamptz(3)
+  retentionUntil       DateTime             @map("retention_until") @db.Timestamptz(3)
+  createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  store              Store                @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  patientUploadLink  PatientUploadLink?   @relation("SubmissionPatientLink", fields: [patientUploadLinkId], references: [id], onDelete: Restrict)
+  consumedLink       PatientUploadLink?   @relation("PatientLinkUsedBy")
+  files              PrescriptionFile[]
+  statusHistory      StatusHistory[]
+  patientLinkHistory PatientLinkHistory[]
+
+  @@index([storeId, createdAt(sort: Desc)])
+  @@index([storeId, operationalStatus])
+  @@index([cpfHashForLookup])
+  @@index([retentionUntil])
+  @@map("prescription_submissions")
+}
+
+model PrescriptionFile {
+  id                String            @id @default(uuid()) @db.Uuid
+  submissionId      String            @map("submission_id") @db.Uuid
+  /// Chave interna gerada pelo sistema (nunca derivada do nome original).
+  storageKey        String            @unique @map("storage_key") @db.VarChar(512)
+  originalFilename  String            @map("original_filename") @db.VarChar(255)
+  mimeType          String            @map("mime_type") @db.VarChar(100)
+  sizeBytes         Int               @map("size_bytes")
+  /// SHA-256 do conteúdo.
+  checksum          String            @db.Char(64)
+  malwareScanStatus MalwareScanStatus @default(PENDING) @map("malware_scan_status")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  submission PrescriptionSubmission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+
+  @@index([submissionId])
+  @@map("prescription_files")
+}
+
+model StatusHistory {
+  id              String             @id @default(uuid()) @db.Uuid
+  submissionId    String             @map("submission_id") @db.Uuid
+  fromStatus      OperationalStatus? @map("from_status")
+  toStatus        OperationalStatus  @map("to_status")
+  changedByUserId String?            @map("changed_by_user_id") @db.Uuid
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  submission PrescriptionSubmission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+  changedBy  User?                  @relation(fields: [changedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([submissionId, createdAt])
+  @@map("status_history")
+}
+
+/// Histórico de vínculo receita ↔ paciente.
+model PatientLinkHistory {
+  id                String          @id @default(uuid()) @db.Uuid
+  submissionId      String          @map("submission_id") @db.Uuid
+  patientExternalId String          @map("patient_external_id") @db.VarChar(128)
+  linkType          PatientLinkType @map("link_type")
+  linkedByUserId    String?         @map("linked_by_user_id") @db.Uuid
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  submission PrescriptionSubmission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+  linkedBy   User?                  @relation(fields: [linkedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([submissionId, createdAt])
+  @@map("patient_link_history")
+}
+
+// -----------------------------------------------------------------------------
+// Auditoria e configuração
+// -----------------------------------------------------------------------------
+
+/// Trilha de auditoria append-only (PRD §23). UPDATE/DELETE/TRUNCATE bloqueados
+/// por trigger. Sem FKs: o registro sobrevive a qualquer alteração nas entidades.
+model AuditLog {
+  id            String      @id @default(uuid()) @db.Uuid
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  actorUserId   String?     @map("actor_user_id") @db.Uuid
+  actorRole     Role?       @map("actor_role")
+  action        String      @db.VarChar(80)
+  entityType    String      @map("entity_type") @db.VarChar(60)
+  entityId      String?     @map("entity_id") @db.VarChar(128)
+  storeId       String?     @map("store_id") @db.Uuid
+  result        AuditResult
+  /// Metadados sanitizados (nunca CPF integral, tokens, senhas ou conteúdo de receita).
+  metadata      Json?
+  ipAddress     String?     @map("ip_address") @db.VarChar(64)
+  correlationId String?     @map("correlation_id") @db.VarChar(64)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([entityType, entityId])
+  @@index([actorUserId, createdAt(sort: Desc)])
+  @@index([storeId, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
+
+/// Parâmetros globais (retenção, expiração de link). Valores validados no serviço
+/// e, para a retenção, também por CHECK no banco.
+model SystemSetting {
+  key             String   @id @db.VarChar(80)
+  value           Json
+  updatedByUserId String?  @map("updated_by_user_id") @db.Uuid
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  updatedBy User? @relation(fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@map("system_settings")
+}
