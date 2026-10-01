@@ -63,6 +63,9 @@ describe('Readiness (e2e)', () => {
 
   it('GET /health/ready verifica o banco', async () => {
     const res = await request(app.getHttpServer()).get('/health/ready').expect(200);
-    expect(res.body).toEqual({ status: 'ok', checks: { database: 'ok', redis: 'ok' } });
+    expect(res.body).toEqual({
+      status: 'ok',
+      checks: { database: 'ok', redis: 'ok', storage: 'ok' },
+    });
   });
 });

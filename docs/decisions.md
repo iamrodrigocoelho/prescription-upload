@@ -192,3 +192,11 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 
 - **Data:** 2026-10-01
 - **Decisão:** abstração `PatientProvider` com os quatro métodos do PRD §27 mais `findByExternalId` (necessário para validar o paciente escolhido). `PATIENT_PROVIDER=mock` usa 6 pacientes **fictícios** (CPFs sintéticos com dígitos verificadores válidos), proibido em produção; `none` responde `503` "consulta de pacientes temporariamente indisponível" (PRD §33). Resultados de busca saem já mascarados (nome + inicial, CPF com 2 últimos dígitos, telefone com 4, e-mail parcial), limitados a 20, com rate limit de 30 buscas/min por usuário.
+
+---
+
+## D-034 — Object storage privado
+
+- **Data:** 2026-10-01
+- **Decisão:** `StorageProvider` com adapter S3 (SigV4) para SeaweedFS. Bucket sem política pública nem ACL anônima (verificado em teste: objeto e listagem sem assinatura → 403). Chaves internas `<prefixo>/<aaaa>/<mm>/<uuid>`, sem nome original nem PII. Acesso apenas por URL assinada de curta duração (`SIGNED_URL_TTL_SECONDS`, padrão 60 s, máx. 900), com `Content-Type`, `Content-Disposition` (nome saneado contra header injection, RFC 6266) e `Cache-Control: private, no-store` fixados na assinatura — qualquer alteração invalida a URL. SHA-256 do conteúdo gravado como metadado. Em dev/test o bucket é criado na inicialização; em produção deve ser provisionado. `/health/ready` verifica o bucket.
+- **Pendente (infra):** criptografia em repouso do volume do SeaweedFS (LUKS ou `-encryptVolumeData`), lifecycle de retenção e antivírus assíncrono (PRD §9.4, §42.12) — Fase 2/infra.

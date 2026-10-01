@@ -4,6 +4,7 @@ import type { Redis } from 'ioredis';
 import { Public } from '../../common/auth/decorators.js';
 import { AppError } from '../../common/errors.js';
 import { REDIS } from '../../infra/redis/redis.module.js';
+import { StorageProvider } from '../../infra/storage/storage.provider.js';
 import { PrismaService } from '../../infra/prisma/prisma.service.js';
 
 type CheckResult = 'ok' | 'fail';
@@ -16,6 +17,7 @@ export class HealthController {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(REDIS) private readonly redis: Redis,
+    private readonly storage: StorageProvider,
   ) {}
 
   /** Liveness: o processo está de pé. Não toca dependências externas. */
@@ -37,6 +39,7 @@ export class HealthController {
       redis: await this.check('redis', async () => {
         await this.redis.ping();
       }),
+      storage: await this.check('storage', () => this.storage.ping()),
     };
     if (Object.values(checks).some((value) => value === 'fail')) {
       throw new AppError(ApiErrorCode.SERVICE_UNAVAILABLE);

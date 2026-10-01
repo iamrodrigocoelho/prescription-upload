@@ -10,6 +10,7 @@ import { CryptoModule } from './infra/crypto/crypto.module.js';
 import { MailModule } from './infra/mail/mail.module.js';
 import { RateLimitModule } from './infra/rate-limit/rate-limit.module.js';
 import { RedisModule } from './infra/redis/redis.module.js';
+import { StorageModule } from './infra/storage/storage.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { PrismaModule } from './infra/prisma/prisma.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
@@ -32,6 +33,7 @@ import { UsersModule } from './modules/users/users.module.js';
     RedisModule,
     RateLimitModule,
     MailModule,
+    StorageModule,
     AuditModule,
     AuthModule,
     HealthModule,

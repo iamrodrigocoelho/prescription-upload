@@ -88,6 +88,15 @@ CREATE DATABASE receita OWNER receita;
 CREATE DATABASE receita_test OWNER receita;
 ```
 
+SeaweedFS com gateway S3 (o arquivo de identidades usa as mesmas credenciais de
+`STORAGE_ACCESS_KEY`/`STORAGE_SECRET_KEY` do `.env`; veja `infra/seaweedfs/start.sh`):
+
+```bash
+weed server -dir=/caminho/dados -s3 -s3.port=8333 -s3.config=/caminho/s3.json \
+  -ip=127.0.0.1 -ip.bind=127.0.0.1
+mailpit   # SMTP em 1025, UI em http://localhost:8025
+```
+
 Atualize `DATABASE_URL`/`TEST_DATABASE_URL` no `.env` se usar outra porta. O Redis é
 compatível com o Valkey usado no Compose.
 
