@@ -20,7 +20,7 @@ export const envSchema = z
       .default('info'),
     LOG_PRETTY: bool.default(false),
     /** Valor repassado ao `trust proxy` do Express (ex.: `loopback`, `1`, lista de IPs). */
-    TRUST_PROXY: z.string().default('loopback'),
+    TRUST_PROXY: z.string().default('1'),
 
     /** URL pública do frontend; base dos links /l/{slug} e /p/{token}. Domínio final pendente. */
     PUBLIC_APP_URL: z.url(),

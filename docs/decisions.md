@@ -200,3 +200,23 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 - **Data:** 2026-10-01
 - **Decisão:** `StorageProvider` com adapter S3 (SigV4) para SeaweedFS. Bucket sem política pública nem ACL anônima (verificado em teste: objeto e listagem sem assinatura → 403). Chaves internas `<prefixo>/<aaaa>/<mm>/<uuid>`, sem nome original nem PII. Acesso apenas por URL assinada de curta duração (`SIGNED_URL_TTL_SECONDS`, padrão 60 s, máx. 900), com `Content-Type`, `Content-Disposition` (nome saneado contra header injection, RFC 6266) e `Cache-Control: private, no-store` fixados na assinatura — qualquer alteração invalida a URL. SHA-256 do conteúdo gravado como metadado. Em dev/test o bucket é criado na inicialização; em produção deve ser provisionado. `/health/ready` verifica o bucket.
 - **Pendente (infra):** criptografia em repouso do volume do SeaweedFS (LUKS ou `-encryptVolumeData`), lifecycle de retenção e antivírus assíncrono (PRD §9.4, §42.12) — Fase 2/infra.
+
+---
+
+## D-035 — IP do cliente e topologia de produção
+
+- **Data:** 2026-10-01
+- **Contexto:** verificado em teste manual que o rewrite `/api/*` do Next.js repassa o `X-Forwarded-For` enviado pelo cliente **sem acrescentar o IP real**. Atrás apenas do Next, a API não conhece o IP verdadeiro e um cliente poderia forjá-lo para contornar o rate limit por IP (o bloqueio por conta continua valendo).
+- **Decisão:** em produção, um proxy de borda (Caddy — `infra/caddy/Caddyfile.example`) termina o TLS, **sobrescreve** `X-Forwarded-For` com o IP real e encaminha `/api/*` **diretamente** para a API; `TRUST_PROXY=1`. API e web não ficam expostas fora da rede interna. O rewrite do Next é mantido apenas como conveniência de desenvolvimento.
+- **Descartado:** confiar em `loopback` (aceitaria o valor forjado) ou remover o header no Next (todos os usuários compartilhariam a mesma chave de rate limit).
+
+## D-036 — Frontend: tokens, marca e segurança
+
+- **Data:** 2026-10-01
+- **Decisão:** tokens semânticos em CSS variables num único arquivo (`apps/web/src/styles/tokens.css`) com valores **neutros provisórios** marcados `TODO(marca)`, contraste AA verificado; a paleta padrão do Tailwind é desligada (`--color-*: initial`) para impedir cores fora do Design System. Fonte do sistema (sem Google Fonts: nenhum dado do usuário trafega para terceiros). O logotipo oficial já existe em `/img/logo/` e é copiado para `public/brand` (gitignored) no `dev`/`build` — fonte única preservada; o arquivo `logo_venancio_tiktok.png` não é usado (aguarda aprovação). CSP com nonce por requisição em `proxy.ts` (Next 16), `strict-dynamic`, `frame-ancestors 'none'`, `style-src-attr 'unsafe-inline'` (posicionamento dos primitivos Radix), `upgrade-insecure-requests` apenas sob HTTPS. `/p/*`, `/redefinir-senha` e `/definir-senha` com `no-store` + `no-referrer`. O token do link gerado só existe em memória no componente de geração. O `?next=` do login aceita apenas caminhos internos `/admin` (anti open redirect).
+
+## D-037 — ESLint 10 e eslint-plugin-react
+
+- **Data:** 2026-10-01
+- **Contexto:** `eslint-plugin-react` 7.37 (via `eslint-config-next`) chama `context.getFilename`, removido no ESLint 10, ao detectar a versão do React.
+- **Decisão:** declarar `settings.react.version` explicitamente no `eslint.config.mjs` do web. Revisitar quando o plugin suportar ESLint 10.

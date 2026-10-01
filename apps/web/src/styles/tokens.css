@@ -1,0 +1,86 @@
+/*
+ * Design tokens — ÚNICO arquivo com valores visuais (DESIGN.md §4).
+ *
+ * TODO(marca): todos os valores abaixo são PROVISÓRIOS, neutros e acessíveis
+ * (contraste WCAG 2.2 AA verificado sobre branco). Substituir pelos valores
+ * oficiais da Drogaria Venancio quando definidos (DESIGN.md §16, itens 1, 2, 5, 6, 10).
+ * NUNCA usar o azul ou qualquer elemento visual da Dasa (DESIGN.md §14.3).
+ * Componentes consomem apenas os nomes semânticos (via Tailwind, globals.css).
+ */
+:root {
+  /* color.brand — TODO(marca): primária oficial */
+  --rv-color-brand-primary: #1f2933;
+  --rv-color-brand-primary-hover: #111827;
+  --rv-color-brand-primary-active: #030712;
+  --rv-color-brand-on-primary: #ffffff;
+
+  /* color.background */
+  --rv-color-background-page: #f5f6f7;
+  --rv-color-background-surface: #ffffff;
+  --rv-color-background-subtle: #eef0f2;
+
+  /* color.text */
+  --rv-color-text-primary: #111827;
+  --rv-color-text-secondary: #374151;
+  --rv-color-text-muted: #545d6a;
+  --rv-color-text-inverse: #ffffff;
+  --rv-color-text-link: #1f2933;
+
+  /* color.border */
+  --rv-color-border-default: #d4d8dd;
+  --rv-color-border-strong: #7d8590;
+  --rv-color-border-focus: #111827;
+
+  /* color.status — sempre acompanhados de texto e ícone */
+  --rv-color-status-success: #166534;
+  --rv-color-status-success-subtle: #e7f6ec;
+  --rv-color-status-warning: #7a4a07;
+  --rv-color-status-warning-subtle: #fdf4d8;
+  --rv-color-status-error: #b42318;
+  --rv-color-status-error-subtle: #fdecea;
+  --rv-color-status-info: #374151;
+  --rv-color-status-info-subtle: #eceef1;
+
+  /* color.state */
+  --rv-color-state-disabled-background: #e5e7eb;
+  --rv-color-state-disabled-text: #6b7280;
+  --rv-color-state-hover: #f0f2f4;
+  --rv-color-state-selected: #e6e9ed;
+
+  /* type — TODO(marca): família tipográfica oficial */
+  --rv-font-family-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --rv-font-family-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --rv-type-display: 2rem;
+  --rv-type-display-line-height: 1.2;
+  --rv-type-h1: 1.5rem;
+  --rv-type-h1-line-height: 1.3;
+  --rv-type-h2: 1.25rem;
+  --rv-type-h2-line-height: 1.35;
+  --rv-type-h3: 1.125rem;
+  --rv-type-h3-line-height: 1.4;
+  --rv-type-body: 1rem;
+  --rv-type-body-line-height: 1.5;
+  --rv-type-body-small: 0.875rem;
+  --rv-type-body-small-line-height: 1.45;
+  --rv-type-label: 0.875rem;
+  --rv-type-label-line-height: 1.4;
+  --rv-type-caption: 0.75rem;
+  --rv-type-caption-line-height: 1.4;
+  --rv-type-button: 0.9375rem;
+  --rv-type-button-line-height: 1.25;
+
+  /* radius — TODO(marca) */
+  --rv-radius-input: 6px;
+  --rv-radius-button: 6px;
+  --rv-radius-card: 10px;
+  --rv-radius-modal: 12px;
+
+  /* border */
+  --rv-border-default: 1px;
+  --rv-border-focus: 2px;
+
+  /* elevation — discreta, apenas para camadas (DESIGN.md §4.5) */
+  --rv-shadow-overlay: 0 8px 24px rgb(17 24 39 / 0.14);
+  --rv-shadow-card: 0 1px 2px rgb(17 24 39 / 0.06);
+}

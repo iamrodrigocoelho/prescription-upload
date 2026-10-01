@@ -1,0 +1,98 @@
+@import 'tailwindcss';
+@import '../styles/tokens.css';
+
+/*
+ * Mapeamento semântico tokens → utilitários Tailwind. A paleta padrão do Tailwind
+ * é desligada (`--color-*: initial`): só existem cores do Design System.
+ */
+@theme inline {
+  --color-*: initial;
+  --color-white: #ffffff;
+
+  --color-primary: var(--rv-color-brand-primary);
+  --color-primary-hover: var(--rv-color-brand-primary-hover);
+  --color-primary-active: var(--rv-color-brand-primary-active);
+  --color-on-primary: var(--rv-color-brand-on-primary);
+
+  --color-page: var(--rv-color-background-page);
+  --color-surface: var(--rv-color-background-surface);
+  --color-subtle: var(--rv-color-background-subtle);
+
+  --color-content: var(--rv-color-text-primary);
+  --color-content-secondary: var(--rv-color-text-secondary);
+  --color-content-muted: var(--rv-color-text-muted);
+  --color-content-inverse: var(--rv-color-text-inverse);
+  --color-link: var(--rv-color-text-link);
+
+  --color-line: var(--rv-color-border-default);
+  --color-line-strong: var(--rv-color-border-strong);
+  --color-focus: var(--rv-color-border-focus);
+
+  --color-success: var(--rv-color-status-success);
+  --color-success-subtle: var(--rv-color-status-success-subtle);
+  --color-warning: var(--rv-color-status-warning);
+  --color-warning-subtle: var(--rv-color-status-warning-subtle);
+  --color-error: var(--rv-color-status-error);
+  --color-error-subtle: var(--rv-color-status-error-subtle);
+  --color-info: var(--rv-color-status-info);
+  --color-info-subtle: var(--rv-color-status-info-subtle);
+
+  --color-disabled: var(--rv-color-state-disabled-background);
+  --color-disabled-content: var(--rv-color-state-disabled-text);
+  --color-hover: var(--rv-color-state-hover);
+  --color-selected: var(--rv-color-state-selected);
+
+  --font-sans: var(--rv-font-family-sans);
+  --font-mono: var(--rv-font-family-mono);
+
+  --text-display: var(--rv-type-display);
+  --text-display--line-height: var(--rv-type-display-line-height);
+  --text-h1: var(--rv-type-h1);
+  --text-h1--line-height: var(--rv-type-h1-line-height);
+  --text-h2: var(--rv-type-h2);
+  --text-h2--line-height: var(--rv-type-h2-line-height);
+  --text-h3: var(--rv-type-h3);
+  --text-h3--line-height: var(--rv-type-h3-line-height);
+  --text-body: var(--rv-type-body);
+  --text-body--line-height: var(--rv-type-body-line-height);
+  --text-body-sm: var(--rv-type-body-small);
+  --text-body-sm--line-height: var(--rv-type-body-small-line-height);
+  --text-label: var(--rv-type-label);
+  --text-label--line-height: var(--rv-type-label-line-height);
+  --text-caption: var(--rv-type-caption);
+  --text-caption--line-height: var(--rv-type-caption-line-height);
+  --text-button: var(--rv-type-button);
+  --text-button--line-height: var(--rv-type-button-line-height);
+
+  --radius-input: var(--rv-radius-input);
+  --radius-button: var(--rv-radius-button);
+  --radius-card: var(--rv-radius-card);
+  --radius-modal: var(--rv-radius-modal);
+
+  --shadow-overlay: var(--rv-shadow-overlay);
+  --shadow-card: var(--rv-shadow-card);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    color: var(--color-content);
+    background: var(--color-page);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Foco sempre visível para navegação por teclado (WCAG 2.4.7 / 2.4.11). */
+  :focus-visible {
+    outline: var(--rv-border-focus) solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

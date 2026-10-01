@@ -1,0 +1,25 @@
+# Proxy de borda para produção self-hosted (Caddy 2, Apache-2.0).
+# - TLS automático (ou certificados próprios);
+# - /api/* vai DIRETO para a API (não passa pelo Next);
+# - X-Forwarded-For é SOBRESCRITO com o IP real do cliente: um valor enviado pelo
+#   cliente nunca chega à API (base do rate limit por IP). Com esta topologia, use
+#   TRUST_PROXY=1 na API e não exponha as portas da API/web fora da rede interna.
+# Domínio definitivo pendente (PRD §42.2).
+
+receita.example.com {
+	encode zstd gzip
+
+	handle_path /api/* {
+		reverse_proxy api:4000 {
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	handle {
+		reverse_proxy web:3000 {
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+}

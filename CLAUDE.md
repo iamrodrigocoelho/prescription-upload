@@ -35,6 +35,10 @@ Não avance de etapa com testes quebrados.
   decorators), `infra/` (prisma, redis, crypto, mail, storage), `modules/<domínio>/`.
 - `apps/web` — Next.js App Router; grupos `(public)`, `(auth)`, `(admin)`. Chama a API pela
   mesma origem (`/api/*` → proxy para a API).
+- `apps/web` (detalhes) — Next.js 16: `src/proxy.ts` (antigo middleware) aplica a CSP com
+  nonce; `src/styles/tokens.css` é o ÚNICO lugar com valores visuais (cores do Tailwind
+  padrão estão desligadas); componentes em `src/components/ui`; chamadas à API via
+  `src/lib/api.ts` (envia o CSRF); permissões de UI via `navItemsFor`/`useSession().can`.
 - `packages/shared` — enums de domínio, schemas Zod dos contratos (usados na API e no web),
   CPF e mascaramento. Compilado com `tsc` para `dist/` (rode `pnpm build` após alterar).
 - `packages/config` — tsconfig/ESLint/Prettier compartilhados.

@@ -52,6 +52,12 @@ pnpm db:seed         # admin, lojas e usuários de exemplo
 pnpm dev             # web em http://localhost:3000, API em http://localhost:4000
 ```
 
+Acesse http://localhost:3000/login com o e-mail `SEED_ADMIN_EMAIL` e a senha
+`SEED_ADMIN_PASSWORD` do seu `.env`. Usuários de exemplo: `gestor@receita.local`
+(lojas 101 e 102) e `colaborador@receita.local` (loja 101), com `SEED_DEMO_PASSWORD`.
+Com `PATIENT_PROVIDER=mock`, a busca de pacientes usa dados fictícios — por exemplo,
+o telefone `(21) 99000-0099` retorna dois pacientes.
+
 E-mails enviados em desenvolvimento (recuperação de senha, convites) aparecem no Mailpit:
 http://localhost:8025.
 
@@ -70,6 +76,15 @@ http://localhost:8025.
 | `pnpm db:seed`           | Popula dados de desenvolvimento                                      |
 | `pnpm db:reset`          | Recria o banco de desenvolvimento do zero                            |
 | `pnpm format`            | Prettier                                                             |
+
+## Produção (self-hosted)
+
+- Imagens: `apps/api/Dockerfile` e `apps/web/Dockerfile` (build a partir da raiz).
+- Migrations como job separado: `pnpm db:migrate:deploy`.
+- Proxy de borda obrigatório (TLS, `/api/*` direto para a API, `X-Forwarded-For`
+  sobrescrito): veja `infra/caddy/Caddyfile.example` e `docs/decisions.md` (D-035).
+- Variáveis: `NODE_ENV=production`, `COOKIE_SECURE=true`, `PATIENT_PROVIDER=none` até
+  a API de pacientes existir, segredos via orquestrador/secret manager.
 
 ## Infraestrutura sem Docker
 
