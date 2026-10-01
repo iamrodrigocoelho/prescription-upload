@@ -175,3 +175,20 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 
 - **Data:** 2026-10-01
 - **Decisão:** 12 caracteres base62 do CSPRNG (~71 bits), gerado na criação e imutável (não muda em reimportações), para não invalidar QR Codes e links já divulgados. URL pública = `PUBLIC_APP_URL` + `/l/{slug}`; o domínio final está pendente (PRD §42.2). Lojas inativas permanecem com o slug, mas `storeAcceptsSubmissions()` retorna falso — usado pela validação de links agora e pelo envio público na Fase 2.
+
+---
+
+## D-031 — Links personalizados: geração, status e consumo
+
+- **Data:** 2026-10-01
+- **Decisão:** token de 32 bytes (`crypto.randomBytes`) em base64url, gerado só no backend; persiste-se apenas o SHA-256. A URL `/p/{token}` é devolvida **uma única vez** na resposta de criação e não aparece em listagens, logs (path redigido — D-006) nem auditoria. Loja (escopo + ativa) e paciente (`PatientProvider.findByExternalId`) são validados no backend; o cliente nunca define o rótulo do paciente. Status persistido `ACTIVE | USED | REVOKED`; **`EXPIRED` é derivado** de `expires_at` na leitura (`deriveLinkStatus`), inclusive nos filtros da listagem — sem job. Revogação e consumo usam update condicional (`status = ACTIVE AND expires_at > now()`): atômicos sob concorrência. Consumo idempotente por `used_submission_id` e aceita transação externa (Fase 2 cria a receita e consome o link na mesma transação). Link expirado não pode ser revogado (já está inativo).
+
+## D-032 — Erro neutro único na validação do token
+
+- **Data:** 2026-10-01
+- **Decisão:** `PatientLinkAccessService.resolve` retorna o mesmo `404 LINK_UNAVAILABLE` ("Este link não está mais disponível. Solicite um novo link à Drogaria Venancio.") para token malformado, inexistente, expirado, revogado, utilizado **ou de loja inativa**. Tratar loja inativa como link indisponível evita revelar o estado da loja e mantém a mensagem neutra exigida pelo CA-014.
+
+## D-033 — PatientProvider
+
+- **Data:** 2026-10-01
+- **Decisão:** abstração `PatientProvider` com os quatro métodos do PRD §27 mais `findByExternalId` (necessário para validar o paciente escolhido). `PATIENT_PROVIDER=mock` usa 6 pacientes **fictícios** (CPFs sintéticos com dígitos verificadores válidos), proibido em produção; `none` responde `503` "consulta de pacientes temporariamente indisponível" (PRD §33). Resultados de busca saem já mascarados (nome + inicial, CPF com 2 últimos dígitos, telefone com 4, e-mail parcial), limitados a 20, com rate limit de 30 buscas/min por usuário.

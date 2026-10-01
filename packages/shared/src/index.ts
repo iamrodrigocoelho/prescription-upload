@@ -11,3 +11,6 @@ export * from './schemas/pagination.js';
 export * from './schemas/users.js';
 export * from './schemas/audit.js';
 export * from './schemas/stores.js';
+export * from './patient-link-status.js';
+export * from './schemas/patients.js';
+export * from './schemas/patient-links.js';
