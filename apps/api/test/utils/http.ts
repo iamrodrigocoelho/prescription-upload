@@ -50,3 +50,17 @@ export function sessionCookieFrom(res: { headers: Record<string, unknown> }): st
   const cookie = cookies.find((value) => value.startsWith('rv_session='));
   return cookie?.split(';')[0]?.split('=')[1] || undefined;
 }
+
+/** Cria um usuário (via factory) e devolve um Client já autenticado como ele. */
+export async function loginAs(
+  app: INestApplication,
+  create: () => Promise<{ user: { email: string } }>,
+): Promise<Client> {
+  const { user } = await create();
+  const client = new Client(app);
+  const res = await client.login(user.email);
+  if (res.status !== 200 || res.body.status !== 'AUTHENTICATED') {
+    throw new Error(`Login de teste falhou: ${res.status} ${JSON.stringify(res.body)}`);
+  }
+  return client;
+}

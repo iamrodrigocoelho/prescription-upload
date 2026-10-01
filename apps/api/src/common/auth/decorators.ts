@@ -1,11 +1,11 @@
 import { createParamDecorator, type ExecutionContext, SetMetadata } from '@nestjs/common';
-import type { Role } from '@receita/shared';
+import type { Permission } from '@receita/shared';
 import { SessionState } from '../../generated/prisma/client.js';
 import type { AuthContext, AuthenticatedRequest } from './auth.types.js';
 
 export const IS_PUBLIC = 'auth:isPublic';
 export const ALLOWED_SESSION_STATES = 'auth:allowedSessionStates';
-export const ROLES = 'auth:roles';
+export const PERMISSIONS = 'auth:permissions';
 
 /** Rota acessível sem sessão. Toda rota é protegida por padrão. */
 export const Public = (): MethodDecorator & ClassDecorator => SetMetadata(IS_PUBLIC, true);
@@ -17,9 +17,13 @@ export const Public = (): MethodDecorator & ClassDecorator => SetMetadata(IS_PUB
 export const AllowSessionStates = (...states: SessionState[]): MethodDecorator & ClassDecorator =>
   SetMetadata(ALLOWED_SESSION_STATES, states);
 
-/** Perfis autorizados. Sem o decorator, qualquer perfil autenticado é aceito. */
-export const Roles = (...roles: Role[]): MethodDecorator & ClassDecorator =>
-  SetMetadata(ROLES, roles);
+/**
+ * Permissões exigidas (todas). Sem o decorator, qualquer usuário autenticado é
+ * aceito — o escopo de loja continua sendo aplicado nas consultas.
+ */
+export const RequirePermissions = (
+  ...permissions: Permission[]
+): MethodDecorator & ClassDecorator => SetMetadata(PERMISSIONS, permissions);
 
 /** Injeta o contexto autenticado (garantido pelo AuthGuard nas rotas protegidas). */
 export const CurrentAuth = createParamDecorator(

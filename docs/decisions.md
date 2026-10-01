@@ -151,3 +151,15 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 
 - **Data:** 2026-10-01
 - **Decisão:** toda resposta da API é marcada `no-store` (dados pessoais e de saúde não devem ficar em caches de navegador ou proxy).
+
+---
+
+## D-027 — Modelo de permissões e escopo de loja
+
+- **Data:** 2026-10-01
+- **Decisão:** matriz `ROLE_PERMISSIONS` em `packages/shared` (fonte única para backend e navegação do frontend). Guards globais: autenticação → CSRF → `@RequirePermissions(...)`. Escopo de loja (`StoreScopeService`) aplicado **na consulta** (`storeWhere`/`storeIdWhere`); todo `store_id` vindo do cliente passa por `assertStoreInScope`. Semântica de erro: `store_id` fora do escopo no corpo da requisição → `403` auditado (`authz.denied`), sem revelar se a loja existe; recurso de outra loja acessado por ID → `404` (indistinguível de inexistente). Toda negação de permissão é auditada com resultado `DENIED`.
+
+## D-028 — Proteções na gestão de usuários
+
+- **Data:** 2026-10-01
+- **Decisão:** o Admin não pode desativar a si mesmo nem alterar o próprio perfil; o sistema impede remover/rebaixar o último Admin ativo. Promover a Admin remove os vínculos de loja e torna o 2FA obrigatório (salvo indicação explícita). Rebaixar exige informar lojas. Desativar revoga todas as sessões. Admin pode revogar sessões e resetar o 2FA de um usuário (perda do autenticador), ambos auditados. Reenvio de convite só para usuários sem senha definida.

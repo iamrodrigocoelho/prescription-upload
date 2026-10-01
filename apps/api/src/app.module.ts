@@ -15,6 +15,7 @@ import { PrismaModule } from './infra/prisma/prisma.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
+import { UsersModule } from './modules/users/users.module.js';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { SettingsModule } from './modules/settings/settings.module.js';
     AuthModule,
     HealthModule,
     SettingsModule,
+    UsersModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
 })
