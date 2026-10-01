@@ -384,3 +384,16 @@ model SystemSetting {
 
   @@map("system_settings")
 }
+
+/// Objetos de storage que não puderam ser removidos após uma falha (ex.: transação
+/// do envio desfeita). Um job de limpeza futuro remove e marca `resolved_at`.
+model OrphanedObject {
+  id         String    @id @default(uuid()) @db.Uuid
+  storageKey String    @map("storage_key") @db.VarChar(512)
+  reason     String    @db.VarChar(120)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  resolvedAt DateTime? @map("resolved_at") @db.Timestamptz(3)
+
+  @@index([resolvedAt])
+  @@map("orphaned_objects")
+}

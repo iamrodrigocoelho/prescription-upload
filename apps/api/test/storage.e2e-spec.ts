@@ -86,6 +86,36 @@ describe('Storage privado (integração)', () => {
     expect((await fetch(url)).status).toBe(403);
   });
 
+  it('upload em streaming grava o conteúdo completo', async () => {
+    const { Readable } = await import('node:stream');
+    const key = generateStorageKey('test');
+    const chunks = [Buffer.alloc(300_000, 1), Buffer.alloc(300_000, 2), Buffer.from('fim')];
+    await storage.putObjectStream({ key, body: Readable.from(chunks), contentType: 'image/jpeg' });
+    await expect(storage.headObject(key)).resolves.toEqual({
+      size: 600_003,
+      contentType: 'image/jpeg',
+    });
+    await storage.deleteObject(key);
+  });
+
+  it('upload em streaming abortado não deixa objeto', async () => {
+    const { Readable } = await import('node:stream');
+    const key = generateStorageKey('test');
+    const controller = new AbortController();
+    const body = new Readable({ read() {} });
+    body.push(Buffer.alloc(1000));
+    const pending = storage.putObjectStream({
+      key,
+      body,
+      contentType: 'image/jpeg',
+      signal: controller.signal,
+    });
+    controller.abort();
+    body.destroy();
+    await expect(pending).rejects.toBeDefined();
+    await expect(storage.headObject(key)).resolves.toBeNull();
+  });
+
   it('headObject e deleteObject', async () => {
     const { key, body } = await putSample();
     await expect(storage.headObject(key)).resolves.toEqual({

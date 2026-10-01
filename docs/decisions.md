@@ -246,3 +246,14 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 
 - **Data:** 2026-10-01
 - **Decisão:** `prom-client` com `GET /metrics` exigindo `Authorization: Bearer METRICS_TOKEN` (sem token configurado o endpoint responde 404); exposto apenas na rede interna. Latência por **template** de rota (`/public/patient-links/:token`), nunca a URL concreta; contadores de captcha, envios, arquivos aceitos/rejeitados, falhas de storage e eventos de segurança, apenas com labels categóricos.
+
+## D-042 — Transporte do upload
+
+- **Data:** 2026-10-01
+- **Decisão:** `multipart/form-data` direto à API, processado em **streaming** com busboy. Limites aplicados pelo parser antes de bufferizar: 10 arquivos, 5 MB por arquivo, 10 campos de texto de até 8 KB, e corpo total ≤ 10 × 5 MB + 512 KB (verificado já pelo `Content-Length`). **Os campos de texto (captcha, CPF, loja) devem vir antes dos arquivos**: a validação desses campos — incluindo o captcha e a resolução de loja/link — roda antes de qualquer byte de arquivo ser gravado, então tráfego de bot não chega ao storage. Cada arquivo: os primeiros 4.100 bytes definem o tipo real (magic bytes, `file-type`), que precisa concordar com a extensão; o restante segue em stream para o storage (`putObjectStream`, `@aws-sdk/lib-storage`, uma parte de até ~5 MB) com SHA-256 e tamanho calculados no caminho. Qualquer arquivo inválido rejeita o envio inteiro (o frontend já impede arquivos inválidos). Objetos gravados de um envio que falhou são removidos; se a remoção falhar, vão para `orphaned_objects` (limpeza futura).
+- **Descartado:** bufferizar tudo em memória (até 50 MB por requisição) e upload direto do navegador ao storage com URL pré-assinada (exporia o storage ao público e dificultaria a validação antes do armazenamento).
+
+## D-043 — Antivírus
+
+- **Data:** 2026-10-01
+- **Decisão:** interface `MalwareScanner` com adapter no-op; arquivos nascem com `malware_scan_status = PENDING`. Estratégia real pendente (PRD §42, item 12). A Fase 3 deve tratar PDFs com cautela no visualizador enquanto não houver varredura.

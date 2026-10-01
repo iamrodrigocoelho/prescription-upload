@@ -1,9 +1,19 @@
+import type { Readable } from 'node:stream';
+
 export interface PutObjectInput {
   key: string;
   body: Buffer;
   contentType: string;
   /** SHA-256 em hex do conteúdo, gravado como metadado para verificação de integridade. */
   sha256?: string;
+}
+
+export interface PutObjectStreamInput {
+  key: string;
+  body: Readable;
+  contentType: string;
+  /** Permite abortar o upload (ex.: arquivo excedeu o limite no meio do stream). */
+  signal?: AbortSignal;
 }
 
 export interface SignedUrlOptions {
@@ -26,6 +36,8 @@ export interface ObjectInfo {
  */
 export abstract class StorageProvider {
   abstract putObject(input: PutObjectInput): Promise<void>;
+  /** Upload em streaming, sem bufferizar o arquivo inteiro na aplicação. */
+  abstract putObjectStream(input: PutObjectStreamInput): Promise<void>;
   abstract getSignedUrl(key: string, options: SignedUrlOptions): Promise<string>;
   abstract headObject(key: string): Promise<ObjectInfo | null>;
   abstract deleteObject(key: string): Promise<void>;

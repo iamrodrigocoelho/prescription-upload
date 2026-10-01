@@ -9,6 +9,7 @@ import {
   S3Client,
   S3ServiceException,
 } from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { ENV } from '../../config/config.module.js';
@@ -17,6 +18,7 @@ import { contentDisposition } from './storage-key.js';
 import {
   type ObjectInfo,
   type PutObjectInput,
+  type PutObjectStreamInput,
   type SignedUrlOptions,
   StorageProvider,
 } from './storage.provider.js';
@@ -74,6 +76,31 @@ export class S3StorageProvider extends StorageProvider implements OnModuleInit {
         Metadata: input.sha256 ? { sha256: input.sha256 } : undefined,
       }),
     );
+  }
+
+  async putObjectStream(input: PutObjectStreamInput): Promise<void> {
+    const upload = new Upload({
+      client: this.client,
+      params: {
+        Bucket: this.bucket,
+        Key: input.key,
+        Body: input.body,
+        ContentType: input.contentType,
+      },
+      // Arquivos de receita têm até 5 MB: cabem em uma parte (sem multipart real).
+      partSize: 5 * 1024 * 1024 + 1024,
+      queueSize: 1,
+      leavePartsOnError: false,
+    });
+    const onAbort = (): void => {
+      void upload.abort();
+    };
+    input.signal?.addEventListener('abort', onAbort, { once: true });
+    try {
+      await upload.done();
+    } finally {
+      input.signal?.removeEventListener('abort', onAbort);
+    }
   }
 
   getSignedUrl(key: string, options: SignedUrlOptions): Promise<string> {
