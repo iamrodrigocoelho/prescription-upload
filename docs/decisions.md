@@ -163,3 +163,15 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 
 - **Data:** 2026-10-01
 - **Decisão:** o Admin não pode desativar a si mesmo nem alterar o próprio perfil; o sistema impede remover/rebaixar o último Admin ativo. Promover a Admin remove os vínculos de loja e torna o 2FA obrigatório (salvo indicação explícita). Rebaixar exige informar lojas. Desativar revoga todas as sessões. Admin pode revogar sessões e resetar o 2FA de um usuário (perda do autenticador), ambos auditados. Reenvio de convite só para usuários sem senha definida.
+
+---
+
+## D-029 — Importação de lojas por CSV
+
+- **Data:** 2026-10-01
+- **Decisão:** `POST /admin/stores/import` (multipart, campo `file`, máx. 2 MB e 5.000 linhas). Delimitador `,` ou `;` detectado pelo cabeçalho (Excel pt-BR usa `;`), BOM aceito, cabeçalhos sem distinção de caixa. `active` aceita true/false, sim/não, 1/0, ativo/inativo. UF validada contra a lista oficial. Valores que começam com `=`, `+`, `@`, TAB ou CR são rejeitados (prevenção de CSV injection em exportações futuras). Linhas válidas são aplicadas numa única transação com upsert por `store_number` (o slug existente é preservado); inválidas vão para o relatório com linha e campo. `?dryRun=true` valida sem gravar (pré-visualização na UI). A auditoria registra apenas contagens, nunca o conteúdo do arquivo.
+
+## D-030 — Slug público da loja
+
+- **Data:** 2026-10-01
+- **Decisão:** 12 caracteres base62 do CSPRNG (~71 bits), gerado na criação e imutável (não muda em reimportações), para não invalidar QR Codes e links já divulgados. URL pública = `PUBLIC_APP_URL` + `/l/{slug}`; o domínio final está pendente (PRD §42.2). Lojas inativas permanecem com o slug, mas `storeAcceptsSubmissions()` retorna falso — usado pela validação de links agora e pelo envio público na Fase 2.

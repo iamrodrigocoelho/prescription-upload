@@ -90,6 +90,7 @@ export const AuditAction = {
   USER_ACTIVATED: 'user.activated',
   USER_DEACTIVATED: 'user.deactivated',
   USER_STORE_SCOPE_CHANGED: 'user.store_scope.changed',
+  STORE_CREATED: 'store.created',
   STORE_IMPORTED: 'store.import.completed',
   STORE_UPDATED: 'store.updated',
   SETTINGS_UPDATED: 'settings.updated',
