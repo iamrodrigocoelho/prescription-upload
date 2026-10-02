@@ -36,3 +36,19 @@ receita.example.com {
 		}
 	}
 }
+
+# Storage para o NAVEGADOR (URLs assinadas de visualização/download — D-061).
+# STORAGE_PUBLIC_ENDPOINT=https://arquivos.example.com na API. O Host original é
+# preservado (a assinatura SigV4 depende dele); sem acesso anônimo no SeaweedFS.
+arquivos.example.com {
+	log {
+		output file /var/log/caddy/receita-files.log
+		format filter {
+			# Assinaturas e credenciais temporárias nunca vão para o log de acesso.
+			request>uri query delete *
+		}
+	}
+	reverse_proxy seaweedfs:8333 {
+		header_up Host {host}
+	}
+}

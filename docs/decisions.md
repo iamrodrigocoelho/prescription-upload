@@ -346,3 +346,8 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 - **Data:** 2026-10-01
 - **Contexto:** anexos de um envio são gravados no mesmo instante; ordenar por `(created_at, id)` desempatava pelo UUID aleatório e a posição ("Arquivo 1/2") mudava entre aberturas (detectado por teste intermitente).
 - **Decisão:** coluna `prescription_files.position` gravada no envio (ordem do multipart), índice `(submission_id, position)` e backfill dos registros existentes por ordem de criação.
+
+## D-061 — Anexos: URLs assinadas e endpoint público do storage
+
+- **Data:** 2026-10-01
+- **Decisão (aprovada):** `view-url` (`inline`; variantes `original`, `preview`, `thumbnail`) e `download-url` (`attachment`, sempre o original) são gerados só após o escopo da receita **e** o vínculo arquivo↔receita (IDOR → 404); TTL `SIGNED_URL_TTL_SECONDS`; respostas `no-store`; a URL nunca é logada (corpos de resposta não são logados; Caddy remove a query do log do storage). O nome no `Content-Disposition` é genérico (`receita-<id>-<posição>.<ext>`) para que o nome original não apareça na URL. As URLs usam `STORAGE_PUBLIC_ENDPOINT` (subdomínio servido pelo proxy de borda preservando o `Host`); a CSP do Admin libera apenas essa origem. Auditoria: `prescription.file_viewed` e `prescription.file_downloaded` com usuário, perfil, receita, arquivo, data/hora e loja (PRD §13.2, CA-009). Revelação de CPF conforme D-056.

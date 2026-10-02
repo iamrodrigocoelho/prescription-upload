@@ -107,12 +107,20 @@ export const envSchema = z
 
     // Object storage S3-compatible (SeaweedFS)
     STORAGE_ENDPOINT: z.url(),
+    /**
+     * Endereço do storage visto pelo NAVEGADOR (URLs assinadas). Em produção, um
+     * subdomínio servido pelo proxy de borda preservando o Host (D-061). Padrão:
+     * STORAGE_ENDPOINT.
+     */
+    STORAGE_PUBLIC_ENDPOINT: z.preprocess((v) => (v === '' ? undefined : v), z.url().optional()),
     STORAGE_REGION: z.string().default('us-east-1'),
     STORAGE_BUCKET: z.string().min(3),
     STORAGE_ACCESS_KEY: z.string().min(1),
     STORAGE_SECRET_KEY: z.string().min(1),
     STORAGE_FORCE_PATH_STYLE: bool.default(true),
     SIGNED_URL_TTL_SECONDS: z.coerce.number().int().min(10).max(900).default(60),
+    /** Revelações de CPF por usuário por hora (D-056). */
+    CPF_REVEAL_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(30),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production') {

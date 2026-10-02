@@ -31,11 +31,22 @@ import {
 export class S3StorageProvider extends StorageProvider implements OnModuleInit {
   private readonly logger = new Logger(S3StorageProvider.name);
   private readonly client: S3Client;
+  /** Cliente só para assinar URLs com o endereço público (não faz chamadas de rede). */
+  private readonly presignClient: S3Client;
   private readonly bucket: string;
 
   constructor(@Inject(ENV) private readonly env: Env) {
     super();
     this.bucket = env.STORAGE_BUCKET;
+    const clientConfig = (endpoint: string) => ({
+      endpoint,
+      region: env.STORAGE_REGION,
+      forcePathStyle: env.STORAGE_FORCE_PATH_STYLE,
+      credentials: { accessKeyId: env.STORAGE_ACCESS_KEY, secretAccessKey: env.STORAGE_SECRET_KEY },
+    });
+    this.presignClient = new S3Client(
+      clientConfig(env.STORAGE_PUBLIC_ENDPOINT ?? env.STORAGE_ENDPOINT),
+    );
     this.client = new S3Client({
       endpoint: env.STORAGE_ENDPOINT,
       region: env.STORAGE_REGION,
@@ -111,7 +122,7 @@ export class S3StorageProvider extends StorageProvider implements OnModuleInit {
       ResponseContentDisposition: contentDisposition(options.disposition, options.filename),
       ResponseCacheControl: 'private, no-store',
     });
-    return getSignedUrl(this.client, command, {
+    return getSignedUrl(this.presignClient, command, {
       expiresIn: options.ttlSeconds ?? this.env.SIGNED_URL_TTL_SECONDS,
     });
   }

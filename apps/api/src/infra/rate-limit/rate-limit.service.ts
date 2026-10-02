@@ -15,7 +15,8 @@ export type LimiterName =
   | 'mfaSession'
   | 'patientSearchUser'
   | 'publicLookupIp'
-  | 'publicSubmitIp';
+  | 'publicSubmitIp'
+  | 'cpfRevealUser';
 
 /** Exceção de rate limit com o tempo de espera, usada para o header Retry-After. */
 export class RateLimitedError extends AppError {
@@ -55,6 +56,7 @@ export class RateLimitService {
         env.PUBLIC_LOOKUP_RATE_LIMIT_POINTS,
         env.PUBLIC_LOOKUP_RATE_LIMIT_WINDOW_SECONDS,
       ),
+      cpfRevealUser: make('cpf-reveal-user', env.CPF_REVEAL_RATE_LIMIT_PER_HOUR, 3600),
       publicSubmitIp: make(
         'public-submit-ip',
         env.PUBLIC_SUBMIT_RATE_LIMIT_POINTS,
