@@ -1,5 +1,10 @@
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { NextConfig } from 'next';
+
+// Variáveis do monorepo ficam no .env da raiz (variáveis já definidas prevalecem).
+const rootEnv = resolve(import.meta.dirname, '../../.env');
+if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 
 const apiUrl = process.env.API_INTERNAL_URL ?? 'http://localhost:4000';
 const isProd = process.env.NODE_ENV === 'production';
@@ -11,6 +16,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   output: 'standalone',
+  // Valores públicos expostos ao navegador (somente estes).
+  env: {
+    NEXT_PUBLIC_RECAPTCHA_SITE_KEY: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ?? '',
+    NEXT_PUBLIC_PRIVACY_POLICY_URL: process.env.NEXT_PUBLIC_PRIVACY_POLICY_URL ?? '',
+  },
   outputFileTracingRoot: resolve(import.meta.dirname, '../..'),
   turbopack: { root: resolve(import.meta.dirname, '../..') },
   images: { unoptimized: true },

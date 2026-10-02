@@ -16,12 +16,20 @@ export function proxy(request: NextRequest) {
   }
 
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
+  // Terceiros (reCAPTCHA) apenas nas rotas públicas de envio; o Admin não carrega nada externo.
+  const isPublicSubmission = /^\/(l|p|enviar)(\/|$)/.test(pathname);
+  const recaptchaScript = isPublicSubmission
+    ? ' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/'
+    : '';
   const isDev = process.env.NODE_ENV === 'development';
   const isHttps =
     request.nextUrl.protocol === 'https:' || request.headers.get('x-forwarded-proto') === 'https';
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${recaptchaScript}${isDev ? " 'unsafe-eval'" : ''}`,
+    isPublicSubmission
+      ? 'frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/'
+      : "frame-src 'none'",
     // Estilos inline de atributo são usados por primitivos Radix (posicionamento).
     isDev ? "style-src 'self' 'unsafe-inline'" : `style-src-elem 'self' 'nonce-${nonce}'`,
     "style-src-attr 'unsafe-inline'",

@@ -279,3 +279,28 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 - **Data:** 2026-10-01
 - **Decisão (aprovada):** ao abrir `/p/{token}`, a página envia o token **no corpo** de `POST /public/patient-link-sessions`; a API valida (mesma regra/erro neutro), audita a abertura, gera um ID de contexto aleatório (32 bytes) e grava no Redis apenas `sha256(ID) → linkId` (30 min), definindo o cookie `__Host-rv_plink` (`rv_plink` em dev) HttpOnly + SameSite=Strict. A página substitui a URL por `/p` (`history.replaceState`) antes de carregar qualquer script de terceiros (reCAPTCHA). Consulta e envio usam `GET /public/patient-link-sessions/current` e `POST /public/patient-link-sessions/current/prescriptions`; o link é revalidado a cada chamada e o contexto é encerrado após o envio. As rotas com token no path (PRD §26.1) continuam disponíveis. `/p` e `/p/*` com `Cache-Control: no-store` e `Referrer-Policy: no-referrer`; o path com token é mascarado nos logs da API, do Caddy e do `next dev`; métricas usam o template da rota.
 - **Limites:** a URL original continua na mensagem recebida (WhatsApp/e-mail) e alguns navegadores registram a URL de entrada no histórico global; o contexto é por dispositivo.
+
+## D-048 — HEIC no cliente
+
+- **Data:** 2026-10-01
+- **Decisão:** HEIC/HEIF é aceito pela extensão no cliente (navegadores costumam informar MIME vazio para HEIC) e validado pelos magic bytes no servidor. Pré-visualização: tenta-se exibir a imagem; onde o navegador não decodifica HEIC (quase todos, exceto Safari), mostra-se o ícone do tipo de arquivo. Sem conversão nem miniatura no servidor nesta fase (fora do escopo). Object URLs são revogadas ao remover o arquivo ou desmontar o componente.
+
+## D-049 — Aviso de privacidade provisório **[pendente Jurídico/DPO]**
+
+- **Data:** 2026-10-01
+- **Decisão:** link visível para a Política de Privacidade (`NEXT_PUBLIC_PRIVACY_POLICY_URL`, hoje `https://pendente.invalid/…`) e texto curto PROVISÓRIO em `apps/web/src/components/public/privacy-notice.tsx` (marcado `TODO(juridico)`): "Os dados e arquivos enviados são usados somente para viabilizar o atendimento da sua receita pela Drogaria Venancio." Sem checkbox de consentimento (PRD §22.2). Texto final, base legal, URL e menção ao reCAPTCHA (dados enviados ao Google) dependem do Jurídico/DPO.
+
+## D-050 — Microcopy adicional (não prevista no DESIGN)
+
+- **Data:** 2026-10-01
+- **Decisão:** os textos do DESIGN §6.3/§7 são usados literalmente (constantes `SUBMISSION_MESSAGES`). Textos novos necessários, a validar com UX: "Arraste os arquivos ou" (área de upload no desktop); "Tentar novamente" (rótulo do botão após falha geral, mesmo lugar do "Enviar"); entrada genérica: "Selecione a loja para onde deseja enviar a receita.", "Buscar loja", "Número, nome, bairro ou endereço", "Lojas encontradas", "Nenhuma loja encontrada. Tente outro termo.", "Continuar", "Trocar loja"; contexto da loja: "Loja: {número} · {nome}" (DESIGN §13.1). No link personalizado usa-se o texto neutro do §6.8 ("Envie sua receita para a Drogaria Venancio"). Link de loja inexistente exibe a mesma mensagem de loja indisponível (§6.10), sem texto novo.
+
+## D-051 — Formulário público: captcha, idempotência e erros
+
+- **Data:** 2026-10-01
+- **Decisão:** um único `SubmissionForm` para `/l/[slug]`, `/enviar` e `/p` (CPF só fora do link personalizado). Ordem do DESIGN §6.2. reCAPTCHA v2 em renderização explícita, script `async` com nonce, carregado após o conteúdo; CSP libera Google **apenas** nas rotas públicas de envio (`frame-src 'none'` no restante). Botão Enviar habilitado só com ≥ 1 arquivo, contexto pronto, CPF válido quando preenchido e captcha concluído (`canSubmit`); expiração do captcha desabilita o botão e mostra a mensagem do §7. Arquivos inválidos não entram na lista (aparecem num alerta com o motivo) e nunca vão ao backend. Envio por XHR com barra de progresso; `Idempotency-Key` gerada por tentativa e reaproveitada em "Tentar novamente" (nova chave se arquivos/CPF mudarem); o captcha é refeito a cada tentativa (token de uso único). Erros do servidor por arquivo marcam o arquivo e levam o foco a ele; CPF → foco no campo; falha geral → alerta com foco. Região `aria-live` anuncia arquivos adicionados/rejeitados, progresso e resultado.
+
+## D-052 — Analytics
+
+- **Data:** 2026-10-01
+- **Decisão:** interface `AnalyticsProvider` (no-op em produção, console em dev) com os eventos públicos do PRD §29 tipados por evento. `sanitize` aceita apenas chaves de uma allowlist (`entry`, `fileType`, `reason`, `fileCount`, `durationMs`, `code`) e valores curtos sem espaços — CPF, token, nome de arquivo ou texto livre são descartados. Ferramenta de analytics definitiva: pendente.
