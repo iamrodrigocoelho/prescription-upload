@@ -5,6 +5,17 @@ import { activeStore, adminApi, demoCollaborator, loginPage, submitPrescription 
 /** Paciente fictício do MockPatientProvider (mock-pat-0001). */
 const JOAO_EMAIL = 'joao.teste@example.com';
 
+/** CPF fictício de mock-pat-0001: 100000001 + dígitos verificadores. */
+function mockCpf(base = '100000001'): string {
+  const digit = (digits: string, factor: number) => {
+    const sum = [...digits].reduce((acc, d, i) => acc + Number(d) * (factor - i), 0);
+    const rest = (sum * 10) % 11;
+    return rest === 10 ? 0 : rest;
+  };
+  const first = digit(base, 10);
+  return `${base}${first}${digit(`${base}${first}`, 11)}`;
+}
+
 /** Axe restrito ao diálogo (toasts em animação de entrada geram falso contraste). */
 async function expectNoSeriousA11yViolations(page: Page) {
   const results = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();
@@ -34,6 +45,27 @@ async function searchByEmail(page: Page, email: string) {
   await expect(dialog.getByTestId('patient-result').first()).toBeVisible();
   return dialog;
 }
+
+test('CA-002: envio com CPF é identificado automaticamente (integração ativa)', async ({
+  page,
+}) => {
+  const store = await activeStore();
+  await submitPrescription(store.slug, undefined, mockCpf());
+  const collaborator = demoCollaborator();
+  await loginPage(page, collaborator.email, collaborator.password);
+  await page.goto('/admin/receitas?identificationStatus=IDENTIFIED_AUTO_CPF');
+  // O worker consome o evento do outbox e consulta o provider (mock) em segundos.
+  await expect(async () => {
+    await page.reload();
+    await expect(page.getByTestId('queue-row').first()).toContainText('João T.', {
+      timeout: 1_000,
+    });
+  }).toPass({ timeout: 20_000 });
+  await page.getByTestId('queue-row').first().getByRole('link').first().click();
+  await expect(page.getByText('Identificado automaticamente por CPF').first()).toBeVisible();
+  await expect(page.getByText('Paciente identificado automaticamente pelo CPF')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Vincular paciente' })).toHaveCount(0);
+});
 
 test.describe('Vínculo de paciente', () => {
   test('CA-008: busca, seleção, confirmação explícita e feedback', async ({ page }) => {

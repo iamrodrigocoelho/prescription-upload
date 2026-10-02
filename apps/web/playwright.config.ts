@@ -21,6 +21,8 @@ export const e2eEnv: Record<string, string> = {
   LOG_LEVEL: 'warn',
   LOG_PRETTY: 'false',
   PATIENT_INTEGRATION_ENABLED: 'true',
+  // CA-002: identificação automática no worker contra o provider mock.
+  PATIENT_AUTO_IDENTIFICATION_ENABLED: 'true',
   PATIENT_PROVIDER: 'mock',
   PUBLIC_SUBMIT_RATE_LIMIT_POINTS: '10000',
   PUBLIC_LOOKUP_RATE_LIMIT_POINTS: '10000',

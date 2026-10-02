@@ -36,6 +36,7 @@ cp .env.example .env
 # Preencha os segredos obrigatórios (cada um com um valor distinto):
 #   CPF_ENCRYPTION_KEY, TOTP_ENCRYPTION_KEY   →  openssl rand -base64 32
 #   CPF_LOOKUP_PEPPER, SESSION_SECRET         →  openssl rand -base64 32
+#   PATIENT_SEARCH_AUDIT_PEPPER               →  openssl rand -base64 32
 #   SEED_ADMIN_PASSWORD, SEED_DEMO_PASSWORD   →  senhas de desenvolvimento (≥ 12 caracteres)
 
 # 2. Infraestrutura (PostgreSQL, Valkey, SeaweedFS, Mailpit)
@@ -112,6 +113,37 @@ As URLs assinadas (`SIGNED_URL_TTL_SECONDS`, padrão 60 s) apontam para
 preservando o `Host` (veja `infra/caddy/Caddyfile.example`). A CSP do Admin libera imagens e
 o PDF apenas dessa origem. `CPF_REVEAL_RATE_LIMIT_PER_HOUR` limita a revelação de CPF.
 
+## Pacientes (integração, busca e vínculo)
+
+A integração passa pela abstração `PatientProvider` (PRD §27), sempre envolvida por timeout,
+retry (leituras) e circuit breaker. O contrato da API real **ainda não existe**: o adapter HTTP é
+um esqueleto e ligar a integração com ele falha na inicialização até o checklist
+`docs/integrations/patients-api-checklist.md` ser cumprido.
+
+| Variável                                               | Uso                                                                    |
+| ------------------------------------------------------ | ---------------------------------------------------------------------- |
+| `PATIENT_INTEGRATION_ENABLED`                          | Liga a integração (padrão `false`: a busca informa indisponibilidade). |
+| `PATIENT_PROVIDER`                                     | `mock` (pacientes fictícios; proibido em produção) ou `http`.          |
+| `PATIENT_API_*`                                        | URL, credencial, timeout, novas tentativas e circuit breaker.          |
+| `PATIENT_AUTO_IDENTIFICATION_ENABLED`                  | Identificação automática por CPF no worker.                            |
+| `PATIENT_SEARCH_LIMIT_*`, `PATIENT_SEARCH_MAX_RESULTS` | Limites anti-enumeração da busca.                                      |
+| `PATIENT_SELECTION_TTL_SECONDS`                        | Validade da referência opaca de seleção.                               |
+| `PATIENT_SEARCH_AUDIT_PEPPER`                          | HMAC do termo buscado gravado na auditoria (segredo).                  |
+
+- A busca (`POST /api/patients/search`) exige um contexto — a receita (vínculo) ou a loja
+  (geração de link) — e devolve só dados mascarados com uma `selectionRef` opaca; o ID do
+  paciente nunca vai ao navegador.
+- Vínculo manual: `POST /api/prescriptions/{id}/patient-link` com a `selectionRef`.
+- Métricas: `patient_provider_request_duration_seconds`, `patient_provider_errors_total`,
+  `patient_provider_circuit_state`, `patient_auto_identification_total`.
+
+## Dashboard
+
+`/admin/dashboard` (API `GET /api/dashboard/summary|timeseries|by-status|by-store`) mostra os
+indicadores do PRD §18 sempre no escopo do usuário. "Hoje" e os dias seguem `APP_TIMEZONE`
+(padrão `America/Sao_Paulo`); o período personalizado é limitado por
+`DASHBOARD_MAX_RANGE_DAYS` (padrão 90). Tempos são informativos (mediana, p90 e amostra).
+
 ## Área pública (envio de receitas)
 
 | Entrada                              | Rota                                                    |
@@ -148,8 +180,10 @@ Variáveis desta área (veja `.env.example`):
 - Migrations como job separado: `pnpm db:migrate:deploy`.
 - Proxy de borda obrigatório (TLS, `/api/*` direto para a API, `X-Forwarded-For`
   sobrescrito): veja `infra/caddy/Caddyfile.example` e `docs/decisions.md` (D-035).
-- Variáveis: `NODE_ENV=production`, `COOKIE_SECURE=true`, `PATIENT_PROVIDER=none` até
-  a API de pacientes existir, segredos via orquestrador/secret manager.
+- Variáveis: `NODE_ENV=production`, `COOKIE_SECURE=true`, `PATIENT_INTEGRATION_ENABLED=false`
+  até a API de pacientes existir, segredos via orquestrador/secret manager.
+- A aplicação abre as conexões com o Postgres em UTC (D-078); o fuso exibido vem de
+  `APP_TIMEZONE`.
 
 ## Infraestrutura sem Docker
 

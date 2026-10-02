@@ -84,6 +84,29 @@ Não avance de etapa com testes quebrados.
   `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script`,
   confira que o arquivo não está vazio e aplique com `migrate deploy`.
 
+## Fase 4 — pacientes e dashboard (módulos e convenções)
+
+- API: `modules/patients` (`PatientProvider` + `ResilientPatientProvider`, `PatientSelectionService`,
+  busca com contexto), `modules/patient-identification` (fila BullMQ do worker, identificação
+  por CPF), `modules/prescriptions/prescription-patient-link.service.ts` (vínculo manual),
+  `modules/dashboard` (SQL agregado por escopo).
+- Adapters devolvem SOMENTE `PatientSummary` (mascarado); mapeie a resposta da API com
+  `toPatientSummary` e traduza falhas em `PatientProviderError`. Novo adapter deve passar
+  `test/contracts/patient-provider.contract.ts`.
+- O cliente nunca envia `patient_external_id`: busca → `selectionRef` (Redis, presa a usuário,
+  sessão e contexto) → vínculo/geração de link resolvem no backend.
+- Vínculos (automático e manual) usam update condicional (`patient_external_id IS NULL AND
+identification_status = NOT_IDENTIFIED`) + `PatientLinkHistory` + auditoria + outbox
+  `prescription.patient_linked`. Não alteram `version` (exclusiva do status operacional).
+- Datas: conexões Postgres em UTC via `createPgAdapter` (nunca `new PrismaPg` direto);
+  agrupamentos por dia com `AT TIME ZONE` + `APP_TIMEZONE`.
+- Testes e2e: a tabela `audit_logs` não é limpa entre testes — filtre pelo que o teste criou
+  (usuário, loja, entidade) em vez de "o último registro".
+- Web: `components/admin/patients/patient-search.tsx` (busca compartilhada),
+  `components/admin/prescriptions/link-patient-dialog.tsx`, `components/admin/dashboard/*`
+  (gráficos SVG próprios), `lib/dashboard.ts`. E2E: `admin-patients.spec.ts`,
+  `admin-dashboard.spec.ts`.
+
 ## Convenções de código
 
 - TypeScript strict; sem `any` implícito; sem `console.*` (use o logger do Nest/pino).

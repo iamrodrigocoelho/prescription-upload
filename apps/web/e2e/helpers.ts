@@ -122,12 +122,14 @@ let captchaSeq = 0;
 export async function submitPrescription(
   slug: string,
   files: { name: string; mimeType: string; buffer: Buffer }[] = [jpeg()],
+  cpf?: string,
 ): Promise<void> {
   const api = await request.newContext({ baseURL: ORIGIN, extraHTTPHeaders: { Origin: ORIGIN } });
   captchaSeq += 1;
   const multipart: Record<string, string | { name: string; mimeType: string; buffer: Buffer }> = {
     captchaToken: `e2e-${Date.now()}-${captchaSeq}-token-xxxxxxxxxxxx`,
     slug,
+    ...(cpf ? { cpf } : {}),
   };
   // Playwright aceita um arquivo por chave; para vários, envia-se como lista no FormData.
   const form = new FormData();
