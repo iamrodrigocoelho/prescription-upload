@@ -27,7 +27,7 @@ export default async function globalSetup(): Promise<void> {
   await client.query(`
     TRUNCATE TABLE "patient_link_history", "status_history", "prescription_files", "patient_upload_links",
       "prescription_submissions", "totp_recovery_codes", "password_reset_tokens", "sessions",
-      "user_store_access", "users", "stores", "orphaned_objects" RESTART IDENTITY CASCADE`);
+      "user_store_access", "users", "stores", "orphaned_objects", "outbox_events" RESTART IDENTITY CASCADE`);
   await client.query(`
     INSERT INTO "system_settings" ("key", "value", "updated_at") VALUES
       ('retention_days', '365', now()), ('patient_link_default_expiry_days', '7', now()),

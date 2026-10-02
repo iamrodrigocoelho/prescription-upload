@@ -16,3 +16,5 @@ export * from './schemas/patients.js';
 export * from './schemas/patient-links.js';
 export * from './upload.js';
 export * from './schemas/public.js';
+export * from './status-matrix.js';
+export * from './schemas/prescriptions.js';

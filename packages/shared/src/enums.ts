@@ -58,6 +58,8 @@ export type PatientLinkType = (typeof PatientLinkType)[keyof typeof PatientLinkT
 
 export const MalwareScanStatus = {
   PENDING: 'PENDING',
+  /** Processado sem antivírus configurado (scanner no-op) — D-057. */
+  NOT_SCANNED: 'NOT_SCANNED',
   CLEAN: 'CLEAN',
   INFECTED: 'INFECTED',
   FAILED: 'FAILED',
@@ -100,6 +102,13 @@ export const AuditAction = {
   PATIENT_LINK_CONSUMED: 'patient_link.consumed',
   PATIENT_LINK_OPENED: 'patient_link.opened',
   PRESCRIPTION_SUBMITTED: 'prescription.submitted',
+  PRESCRIPTION_OPENED: 'prescription.opened',
+  PRESCRIPTION_FIRST_VIEWED: 'prescription.first_viewed',
+  PRESCRIPTION_STATUS_CHANGED: 'prescription.status_changed',
+  PRESCRIPTION_REOPENED: 'prescription.reopened',
+  PRESCRIPTION_FILE_VIEWED: 'prescription.file_viewed',
+  PRESCRIPTION_FILE_DOWNLOADED: 'prescription.file_downloaded',
+  PRESCRIPTION_CPF_REVEALED: 'prescription.cpf_revealed',
   SECURITY_PERSONALIZED_LINK_TAMPERING: 'security.personalized_link_tampering',
   AUTHZ_DENIED: 'authz.denied',
 } as const;

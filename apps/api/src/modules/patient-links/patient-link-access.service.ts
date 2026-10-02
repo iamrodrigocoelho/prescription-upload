@@ -13,6 +13,8 @@ export interface ResolvedPatientLink {
   storeNumber: string;
   storeName: string;
   patientExternalId: string;
+  /** Rótulo já mascarado do paciente (D-010), copiado para a receita (Fase 3, item C). */
+  patientDisplayLabel: string;
 }
 
 export type ConsumeResult = 'consumed' | 'already_consumed';
@@ -66,6 +68,7 @@ export class PatientLinkAccessService {
       storeNumber: link.store.storeNumber,
       storeName: link.store.storeName,
       patientExternalId: link.patientExternalId,
+      patientDisplayLabel: link.patientDisplayLabel,
     };
   }
 

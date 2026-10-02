@@ -284,6 +284,14 @@ describe('Envio público de receitas (e2e)', () => {
       });
       const link = await ctx.prisma.patientUploadLink.findUniqueOrThrow({ where: { id } });
       expect(link).toMatchObject({ status: 'USED', usedSubmissionId: submission.id });
+      expect(submission.patientDisplayLabel).toBe(link.patientDisplayLabel);
+      // Evento de domínio gravado na mesma transação (outbox), apenas com IDs.
+      const events = await ctx.prisma.outboxEvent.findMany({
+        where: { type: 'prescription.submitted' },
+      });
+      expect(events.map((e) => e.payload)).toEqual([
+        { submissionId: submission.id, storeId: store.id },
+      ]);
       expect(
         await ctx.prisma.auditLog.count({
           where: { action: AuditAction.PATIENT_LINK_CONSUMED, entityId: id },

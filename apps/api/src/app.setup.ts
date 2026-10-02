@@ -56,3 +56,14 @@ export function configureApp(app: INestApplication): void {
   );
   app.enableShutdownHooks();
 }
+
+/**
+ * Keep-alive da API maior que o do proxy à frente (Caddy/Next): evita que o proxy
+ * reaproveite uma conexão que o Node acabou de fechar ("socket hang up").
+ * Chamar após `init()`/`listen()`.
+ */
+export function tuneHttpServer(app: INestApplication): void {
+  const server = app.getHttpServer() as import('node:http').Server;
+  server.keepAliveTimeout = 65_000;
+  server.headersTimeout = 66_000;
+}

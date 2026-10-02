@@ -11,7 +11,6 @@ import {
 } from '@receita/shared';
 import type { Request } from 'express';
 import { z } from 'zod';
-import { DomainEventBus } from '../../common/events/domain-events.js';
 import { AppError } from '../../common/errors.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { CryptoService } from '../../infra/crypto/crypto.service.js';
@@ -22,7 +21,7 @@ import { RateLimitService } from '../../infra/rate-limit/rate-limit.service.js';
 import { StorageProvider } from '../../infra/storage/storage.provider.js';
 import { AuditService } from '../audit/audit.service.js';
 import { CaptchaService } from '../captcha/captcha.service.js';
-import { MalwareScanner } from '../malware/malware-scanner.js';
+import { OutboxService } from '../outbox/outbox.service.js';
 import { PatientLinkAccessService } from '../patient-links/patient-link-access.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { storeAcceptsSubmissions } from '../stores/stores.service.js';
@@ -40,7 +39,7 @@ interface SubmissionContext {
   storeId: string;
   sourceChannel: SourceChannel;
   cpf?: string;
-  link?: { linkId: string; patientExternalId: string };
+  link?: { linkId: string; patientExternalId: string; patientDisplayLabel: string };
 }
 
 const DAY_MS = 86_400_000;
@@ -94,8 +93,7 @@ export class SubmissionsService {
     private readonly settings: SettingsService,
     private readonly crypto: CryptoService,
     private readonly rateLimit: RateLimitService,
-    private readonly malware: MalwareScanner,
-    private readonly events: DomainEventBus,
+    private readonly outbox: OutboxService,
     private readonly metrics: MetricsService,
     private readonly audit: AuditService,
   ) {}
@@ -172,7 +170,11 @@ export class SubmissionsService {
       return {
         storeId: link.storeId,
         sourceChannel: SourceChannel.PERSONALIZED_LINK,
-        link: { linkId: link.linkId, patientExternalId: link.patientExternalId },
+        link: {
+          linkId: link.linkId,
+          patientExternalId: link.patientExternalId,
+          patientDisplayLabel: link.patientDisplayLabel,
+        },
       };
     }
 
@@ -202,10 +204,9 @@ export class SubmissionsService {
     idempotencyKey?: string,
   ): Promise<void> {
     const { retention_days: retentionDays } = await this.settings.getAll();
-    let submissionId: string;
     let fileRows: { id: string; storageKey: string; mimeType: string }[];
     try {
-      ({ submissionId, fileRows } = await this.prisma.$transaction(async (tx) => {
+      ({ fileRows } = await this.prisma.$transaction(async (tx) => {
         const createSubmission = () =>
           tx.prescriptionSubmission.create({
             data: {
@@ -217,6 +218,7 @@ export class SubmissionsService {
                 ? 'IDENTIFIED_PERSONALIZED_LINK'
                 : 'NOT_IDENTIFIED',
               patientExternalId: context.link?.patientExternalId ?? null,
+              patientDisplayLabel: context.link?.patientDisplayLabel ?? null,
               sourceChannel: context.sourceChannel,
               patientUploadLinkId: context.link?.linkId ?? null,
               idempotencyKey: idempotencyKey ?? null,
@@ -265,7 +267,12 @@ export class SubmissionsService {
           },
           tx,
         );
-        return { submissionId: submission.id, fileRows: rows };
+        // Varredura, derivados e tempo real: entregues pelo worker via outbox (D-054).
+        await this.outbox.add(tx, 'prescription.submitted', {
+          submissionId: submission.id,
+          storeId: context.storeId,
+        });
+        return { fileRows: rows };
       }));
     } catch (error) {
       await this.cleanup.removeObjects(
@@ -285,7 +292,5 @@ export class SubmissionsService {
     }
 
     for (const file of fileRows) this.metrics.uploadedFiles.inc({ type: file.mimeType });
-    await this.malware.enqueue(fileRows.map((file) => ({ fileId: file.id, ...file })));
-    this.events.emit('prescription.submitted', { submissionId, storeId: context.storeId });
   }
 }

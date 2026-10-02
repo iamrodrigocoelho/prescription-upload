@@ -13,6 +13,11 @@ export const Permission = {
   PATIENT_LINKS_READ: 'patient_links:read',
   PATIENT_LINKS_MANAGE: 'patient_links:manage',
   PATIENTS_SEARCH: 'patients:search',
+  PRESCRIPTIONS_READ: 'prescriptions:read',
+  PRESCRIPTIONS_UPDATE_STATUS: 'prescriptions:update_status',
+  /** Isolada para poder ser restringida no futuro sem mudar código (D-056). */
+  PRESCRIPTIONS_REVEAL_CPF: 'prescriptions:reveal_cpf',
+  PRESCRIPTIONS_REOPEN: 'prescriptions:reopen',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
 
@@ -21,11 +26,14 @@ const OPERATIONAL: readonly Permission[] = [
   Permission.PATIENT_LINKS_READ,
   Permission.PATIENT_LINKS_MANAGE,
   Permission.PATIENTS_SEARCH,
+  Permission.PRESCRIPTIONS_READ,
+  Permission.PRESCRIPTIONS_UPDATE_STATUS,
+  Permission.PRESCRIPTIONS_REVEAL_CPF,
 ];
 
 export const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
   [Role.STORE_COLLABORATOR]: OPERATIONAL,
-  [Role.MANAGER]: OPERATIONAL,
+  [Role.MANAGER]: [...OPERATIONAL, Permission.PRESCRIPTIONS_REOPEN],
   [Role.ADMIN]: Object.values(Permission),
 };
 

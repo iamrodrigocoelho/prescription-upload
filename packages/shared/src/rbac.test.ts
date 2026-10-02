@@ -27,6 +27,16 @@ describe('permissões por perfil', () => {
     }
   });
 
+  it('todos os perfis operam receitas no escopo; só Gestor e Admin reabrem', () => {
+    for (const role of [Role.STORE_COLLABORATOR, Role.MANAGER, Role.ADMIN]) {
+      expect(hasPermission(role, Permission.PRESCRIPTIONS_READ)).toBe(true);
+      expect(hasPermission(role, Permission.PRESCRIPTIONS_UPDATE_STATUS)).toBe(true);
+      expect(hasPermission(role, Permission.PRESCRIPTIONS_REVEAL_CPF)).toBe(true);
+    }
+    expect(hasPermission(Role.STORE_COLLABORATOR, Permission.PRESCRIPTIONS_REOPEN)).toBe(false);
+    expect(hasPermission(Role.MANAGER, Permission.PRESCRIPTIONS_REOPEN)).toBe(true);
+  });
+
   it('Admin tem todas as permissões', () => {
     expect([...ROLE_PERMISSIONS[Role.ADMIN]].sort()).toEqual(Object.values(Permission).sort());
   });

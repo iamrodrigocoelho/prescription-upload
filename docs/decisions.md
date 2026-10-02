@@ -309,3 +309,28 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 
 - **Data:** 2026-10-01
 - **Decisão:** Playwright (Chromium) em três viewports (320 px, 375 px com toque, desktop 1280 px) contra builds reais: API com `NODE_ENV=test` (permite a chave de teste do reCAPTCHA e o mock de pacientes, sem qualquer exceção na validação de produção) e web em build de produção, no banco `*_test` e prefixo Redis `rv-e2e:`. O widget **real** do reCAPTCHA com a chave de teste é usado (requer internet). Dados via seed + API do Admin. axe-core verifica as telas públicas (formulário, sucesso, loja indisponível, link inválido, seleção de loja) — nenhuma violação séria/crítica, excluindo apenas o iframe do Google. Também verifica ausência de rolagem horizontal em 320 px.
+
+---
+
+# Fase 3 — Operação da loja
+
+## D-054 — Outbox transacional (substitui o barramento em processo)
+
+- **Data:** 2026-10-01
+- **Decisão (aprovada):** eventos de domínio (`prescription.submitted`, `prescription.viewed`, `prescription.status_changed`) são gravados em `outbox_events` **na mesma transação** da ação, só com IDs e campos não sensíveis. Um dispatcher no worker os entrega à fila BullMQ (processamento de anexos) e ao Redis Stream de tempo real, marcando `processed_at`. O `DomainEventBus` em processo da Fase 2 foi removido. Nenhum evento se perde se o processo cair entre o commit e a entrega.
+
+## D-055 — Matriz de transições do status operacional
+
+- **Data:** 2026-10-01
+- **Decisão (aprovada):** em `packages/shared/src/status-matrix.ts`. Recebida → Em análise | Em atendimento | Cancelada | Não atendida; Em análise → Em atendimento | Cancelada | Não atendida; Em atendimento → Em análise (voltar) | Finalizada | Cancelada | Não atendida. Nunca volta para Recebida; finalizar só a partir de Em atendimento. Estados finais (Finalizada, Cancelada, Não atendida): reabrir → Em análise **somente Gestor e Admin** (`prescriptions:reopen`), com confirmação e auditoria `prescription.reopened`. Sem motivo em texto livre (evita dados pessoais/clínicos).
+
+## D-056 — Exibição do CPF completo
+
+- **Data:** 2026-10-01
+- **Decisão (aprovada):** permissão isolada `prescriptions:reveal_cpf`, hoje concedida aos três perfis **dentro do escopo**. `POST /prescriptions/{id}/cpf/reveal` (`no-store`), rate limit de 30/h por usuário, auditoria `prescription.cpf_revealed` sem o valor. Na interface, o CPF fica visível por 30 s, não entra em cache do cliente nem é copiado automaticamente.
+
+## D-058 — Keep-alive da API
+
+- **Data:** 2026-10-01
+- **Contexto:** "socket hang up" intermitente nos testes: o `keepAliveTimeout` padrão do Node (5 s) fechava conexões que o cliente reaproveitava. Provável explicação das lentidões intermitentes de ~200 s observadas nas Fases 1 e 2.
+- **Decisão:** `keepAliveTimeout = 65 s` e `headersTimeout = 66 s` (maiores que o idle de proxies como Caddy/ALB), aplicados em `main.ts` e nos testes.

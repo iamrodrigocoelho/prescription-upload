@@ -2,7 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { Redis } from 'ioredis';
 import { AppModule } from '../../src/app.module.js';
-import { configureApp } from '../../src/app.setup.js';
+import { configureApp, tuneHttpServer } from '../../src/app.setup.js';
 import { MailProvider } from '../../src/infra/mail/mail.provider.js';
 import { PrismaService } from '../../src/infra/prisma/prisma.service.js';
 import { REDIS } from '../../src/infra/redis/redis.module.js';
@@ -42,6 +42,7 @@ export async function createTestContext(
   const app = moduleRef.createNestApplication({ bodyParser: false, bufferLogs: true });
   configureApp(app);
   await app.init();
+  tuneHttpServer(app);
 
   const prisma = app.get(PrismaService);
   const redis = app.get<Redis>(REDIS);
