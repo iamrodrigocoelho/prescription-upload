@@ -436,7 +436,7 @@ describe('Links personalizados (e2e)', () => {
       }
 
       const audit = await ctx.prisma.auditLog.findFirst({
-        where: { action: AuditAction.PATIENT_SEARCH_PERFORMED },
+        where: { action: AuditAction.PATIENT_SEARCH_PERFORMED, storeId: storeA.id },
         orderBy: { createdAt: 'desc' },
       });
       expect(audit).toMatchObject({ storeId: storeA.id });

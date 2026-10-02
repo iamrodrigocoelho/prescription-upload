@@ -11,9 +11,10 @@ import { JOAO } from './utils/patients.js';
 
 const PEPPER = 'test-search-pepper-test-search-pepper-01';
 
-async function lastSearchAudit(ctx: TestContext) {
+/** Última busca auditada do usuário (a tabela de auditoria não é limpa entre testes). */
+async function lastSearchAudit(ctx: TestContext, actorUserId: string) {
   return ctx.prisma.auditLog.findFirstOrThrow({
-    where: { action: AuditAction.PATIENT_SEARCH_PERFORMED },
+    where: { action: AuditAction.PATIENT_SEARCH_PERFORMED, actorUserId },
     orderBy: { createdAt: 'desc' },
   });
 }
@@ -31,14 +32,16 @@ describe('Busca de pacientes — proteção contra enumeração (e2e)', () => {
 
   async function collaborator() {
     const store = await createStore(ctx.prisma);
-    const client = await loginAs(ctx.app, () =>
-      createUser(ctx.prisma, crypto, { role: 'STORE_COLLABORATOR', storeIds: [store.id] }),
-    );
-    return { store, client };
+    const { user } = await createUser(ctx.prisma, crypto, {
+      role: 'STORE_COLLABORATOR',
+      storeIds: [store.id],
+    });
+    const client = await loginAs(ctx.app, () => Promise.resolve({ user }));
+    return { store, client, user };
   }
 
   it('audita o tipo, o contexto e um HMAC do termo — nunca o valor', async () => {
-    const { store, client } = await collaborator();
+    const { store, client, user } = await collaborator();
     await client
       .post('/patients/search', {
         type: 'email',
@@ -46,7 +49,7 @@ describe('Busca de pacientes — proteção contra enumeração (e2e)', () => {
         context: { storeId: store.id },
       })
       .expect(200);
-    const audit = await lastSearchAudit(ctx);
+    const audit = await lastSearchAudit(ctx, user.id);
     const expected = createHmac('sha256', PEPPER).update('email:familia@example.com').digest('hex');
     expect(audit).toMatchObject({ result: 'SUCCESS', storeId: store.id });
     expect(audit.metadata).toEqual({
@@ -60,12 +63,12 @@ describe('Busca de pacientes — proteção contra enumeração (e2e)', () => {
   });
 
   it('o mesmo termo gera o mesmo HMAC (permite investigar repetição sem guardar o valor)', async () => {
-    const { store, client } = await collaborator();
+    const { store, client, user } = await collaborator();
     const body = { type: 'cpf', query: JOAO.cpf, context: { storeId: store.id } };
     await client.post('/patients/search', body).expect(200);
-    const first = await lastSearchAudit(ctx);
+    const first = await lastSearchAudit(ctx, user.id);
     await client.post('/patients/search', body).expect(200);
-    const second = await lastSearchAudit(ctx);
+    const second = await lastSearchAudit(ctx, user.id);
     const fingerprint = (row: typeof first) =>
       (row.metadata as { queryFingerprint: string }).queryFingerprint;
     expect(fingerprint(second)).toBe(fingerprint(first));
@@ -73,7 +76,7 @@ describe('Busca de pacientes — proteção contra enumeração (e2e)', () => {
   });
 
   it('audita buscas recusadas por contexto com o motivo', async () => {
-    const { client } = await collaborator();
+    const { client, user } = await collaborator();
     const other = await createStore(ctx.prisma);
     const submission = await createSubmission(ctx.prisma, crypto, { storeId: other.id });
     await client
@@ -83,7 +86,7 @@ describe('Busca de pacientes — proteção contra enumeração (e2e)', () => {
         context: { prescriptionId: submission.id },
       })
       .expect(404);
-    const audit = await lastSearchAudit(ctx);
+    const audit = await lastSearchAudit(ctx, user.id);
     expect(audit).toMatchObject({ result: 'DENIED', storeId: null });
     expect(audit.metadata).toMatchObject({ reason: 'not_found', contextType: 'prescription' });
   });
@@ -140,7 +143,7 @@ describe('Busca de pacientes — limites por usuário e por sessão (e2e)', () =
     // Teto do usuário atingido, embora a segunda sessão ainda tenha saldo.
     await second.post('/patients/search', body).expect(429);
 
-    const audit = await lastSearchAudit(ctx);
+    const audit = await lastSearchAudit(ctx, user.id);
     expect(audit).toMatchObject({ result: 'DENIED' });
     expect(audit.metadata).toMatchObject({ reason: 'rate_limited' });
   });
@@ -161,9 +164,11 @@ describe('Busca de pacientes — API indisponível (e2e)', () => {
 
   it('informa indisponibilidade temporária e a receita continua acessível (PRD §33)', async () => {
     const store = await createStore(ctx.prisma);
-    const client = await loginAs(ctx.app, () =>
-      createUser(ctx.prisma, crypto, { role: 'STORE_COLLABORATOR', storeIds: [store.id] }),
-    );
+    const { user } = await createUser(ctx.prisma, crypto, {
+      role: 'STORE_COLLABORATOR',
+      storeIds: [store.id],
+    });
+    const client = await loginAs(ctx.app, () => Promise.resolve({ user }));
     const submission = await createSubmission(ctx.prisma, crypto, { storeId: store.id });
     const res = await client
       .post('/patients/search', {
@@ -179,7 +184,7 @@ describe('Busca de pacientes — API indisponível (e2e)', () => {
     });
     expect(JSON.stringify(res.body)).not.toContain(JOAO.cpf);
 
-    const audit = await lastSearchAudit(ctx);
+    const audit = await lastSearchAudit(ctx, user.id);
     expect(audit).toMatchObject({ result: 'FAILURE', storeId: store.id });
     expect(audit.metadata).toMatchObject({ reason: 'integration_unavailable' });
 

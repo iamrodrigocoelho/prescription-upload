@@ -63,8 +63,9 @@ describe('Lojas (e2e)', () => {
         ['102', true, 'RJ'],
         ['103', false, null],
       ]);
+      // A auditoria não é limpa entre testes: ignora registros com data futura.
       const audit = await ctx.prisma.auditLog.findFirst({
-        where: { action: AuditAction.STORE_IMPORTED },
+        where: { action: AuditAction.STORE_IMPORTED, createdAt: { lte: new Date() } },
         orderBy: { createdAt: 'desc' },
       });
       expect(audit?.metadata).toEqual({

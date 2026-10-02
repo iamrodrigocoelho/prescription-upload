@@ -2,7 +2,7 @@
  * Seed de DESENVOLVIMENTO. Idempotente (upserts). Recusa-se a rodar em produção.
  * Credenciais vêm exclusivamente de variáveis de ambiente (SEED_*).
  */
-import { PrismaPg } from '@prisma/adapter-pg';
+import { createPgAdapter } from '../src/infra/prisma/pg-adapter.js';
 import { PrismaClient, Role } from '../src/generated/prisma/client.js';
 import { hashPassword } from '../src/infra/crypto/password-hasher.js';
 import { generateStoreSlug } from '../src/modules/stores/store-slug.js';
@@ -64,7 +64,7 @@ async function main(): Promise<void> {
   }
 
   const prisma = new PrismaClient({
-    adapter: new PrismaPg({ connectionString: requireEnv('DATABASE_URL') }),
+    adapter: createPgAdapter(requireEnv('DATABASE_URL')),
   });
 
   try {

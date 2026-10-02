@@ -331,7 +331,8 @@ describe('Envio público de receitas (e2e)', () => {
       const events = await ctx.prisma.auditLog.findMany({
         where: {
           action: AuditAction.SECURITY_PERSONALIZED_LINK_TAMPERING,
-          createdAt: { gte: startedAt },
+          // Janela fechada: a tabela de auditoria não é limpa entre testes.
+          createdAt: { gte: startedAt, lte: new Date() },
         },
       });
       expect(events).toHaveLength(3);
