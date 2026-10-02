@@ -37,8 +37,19 @@ export class PatientLinkAccessService {
    */
   async resolve(token: unknown): Promise<ResolvedPatientLink> {
     if (!isWellFormedPatientLinkToken(token)) throw unavailable();
+    return this.resolveWhere({ tokenHash: hashPatientLinkToken(token) });
+  }
+
+  /** Mesmas verificações de `resolve`, a partir do ID (contexto em cookie — D-047). */
+  async resolveById(linkId: string): Promise<ResolvedPatientLink> {
+    return this.resolveWhere({ id: linkId });
+  }
+
+  private async resolveWhere(
+    where: { tokenHash: string } | { id: string },
+  ): Promise<ResolvedPatientLink> {
     const link = await this.prisma.patientUploadLink.findUnique({
-      where: { tokenHash: hashPatientLinkToken(token) },
+      where,
       include: { store: true },
     });
     if (

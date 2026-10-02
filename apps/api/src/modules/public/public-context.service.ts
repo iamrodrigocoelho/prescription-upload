@@ -64,7 +64,7 @@ export class PublicContextService {
    * Contexto do link personalizado. Usa a validação da Fase 1 (erro neutro único,
    * CA-014) e audita a abertura sem registrar o token (PRD §17.5).
    */
-  async patientLinkContext(token: string): Promise<PublicPatientLinkContext> {
+  async patientLinkContext(token: string): Promise<PublicPatientLinkContext & { linkId: string }> {
     const link = await this.links.resolve(token);
     await this.audit.record({
       action: AuditAction.PATIENT_LINK_OPENED,
@@ -73,6 +73,12 @@ export class PublicContextService {
       storeId: link.storeId,
       actor: { userId: null, role: null },
     });
+    return { linkId: link.linkId, storeNumber: link.storeNumber, storeName: link.storeName };
+  }
+
+  /** Contexto a partir do cookie (o link é revalidado a cada chamada). */
+  async patientLinkContextById(linkId: string): Promise<PublicPatientLinkContext> {
+    const link = await this.links.resolveById(linkId);
     return { storeNumber: link.storeNumber, storeName: link.storeName };
   }
 }

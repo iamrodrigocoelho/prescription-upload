@@ -30,7 +30,11 @@ import { IdempotencyService } from './idempotency.service.js';
 import { StorageCleanupService } from './storage-cleanup.service.js';
 import { type ReceivedFile, receiveUpload } from './upload-receiver.js';
 
-export type SubmissionEntry = { type: 'public' } | { type: 'personalized'; token: string };
+export type SubmissionEntry =
+  | { type: 'public' }
+  | { type: 'personalized'; token: string }
+  /** Link personalizado via cookie de contexto (D-047): linkId já resolvido do cookie. */
+  | { type: 'personalized-session'; linkId: string };
 
 interface SubmissionContext {
   storeId: string;
@@ -100,7 +104,12 @@ export class SubmissionsService {
     const ip = req.ip;
     await this.rateLimit.consume('publicSubmitIp', ip ?? 'unknown');
 
-    const scope = entry.type === 'public' ? 'public' : `plink:${sha256Hex(entry.token)}`;
+    const scope =
+      entry.type === 'public'
+        ? 'public'
+        : entry.type === 'personalized'
+          ? `plink:${sha256Hex(entry.token)}`
+          : `plink-id:${entry.linkId}`;
     const idem = await this.idempotency.begin(req.headers['idempotency-key'], scope);
     if (idem.kind === 'replay') {
       req.resume();
@@ -140,7 +149,7 @@ export class SubmissionsService {
     fields: Record<string, string>,
     ip: string | undefined,
   ): Promise<SubmissionContext> {
-    if (entry.type === 'personalized') {
+    if (entry.type !== 'public') {
       const forbidden = Object.keys(fields).filter((name) => !PERSONALIZED_ALLOWED.has(name));
       if (forbidden.length > 0) {
         this.metrics.securityEvents.inc({ type: 'personalized_link_tampering' });
@@ -156,7 +165,10 @@ export class SubmissionsService {
         ]);
       }
       await this.captcha.assertValid(fields.captchaToken, ip);
-      const link = await this.links.resolve(entry.token);
+      const link =
+        entry.type === 'personalized'
+          ? await this.links.resolve(entry.token)
+          : await this.links.resolveById(entry.linkId);
       return {
         storeId: link.storeId,
         sourceChannel: SourceChannel.PERSONALIZED_LINK,

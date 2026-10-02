@@ -40,6 +40,7 @@ const nextConfig: NextConfig = {
         ],
       },
       // Link personalizado: credencial na URL (PRD §6.5).
+      { source: '/p', headers: [noStore, noReferrer] },
       { source: '/p/:path*', headers: [noStore, noReferrer] },
       // Token de redefinição/convite no fragmento; reforço contra vazamento.
       { source: '/redefinir-senha', headers: [noStore, noReferrer] },
