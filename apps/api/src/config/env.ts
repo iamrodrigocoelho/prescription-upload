@@ -133,6 +133,13 @@ export const envSchema = z
     CLAMAV_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(30_000),
     MALWARE_SCAN_WARN_SECONDS: z.coerce.number().int().min(30).max(3600).default(120),
     MALWARE_SCAN_CRITICAL_SECONDS: z.coerce.number().int().min(60).max(7200).default(300),
+    /** Falha fechada: descarte real exige aprovação formal do Jurídico/DPO. */
+    RETENTION_EXECUTION_ENABLED: bool.default(false),
+    RETENTION_STORAGE_VERSIONING: z.enum(['unknown', 'disabled', 'enabled']).default('unknown'),
+    RETENTION_APPROVAL_REFERENCE: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z.string().min(8).optional(),
+    ),
 
     // Pacientes (PRD §27). Desligada, a busca informa indisponibilidade.
     PATIENT_INTEGRATION_ENABLED: bool.default(false),
@@ -174,6 +181,21 @@ export const envSchema = z
     CPF_REVEAL_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(30),
   })
   .superRefine((env, ctx) => {
+    if (env.RETENTION_EXECUTION_ENABLED && !env.RETENTION_APPROVAL_REFERENCE) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['RETENTION_APPROVAL_REFERENCE'],
+        message: 'execução da retenção exige referência da aprovação Jurídico/DPO',
+      });
+    }
+    if (env.RETENTION_EXECUTION_ENABLED && env.RETENTION_STORAGE_VERSIONING !== 'disabled') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['RETENTION_STORAGE_VERSIONING'],
+        message:
+          'execução exige storage verificado sem versionamento ou adapter de exclusão de versões',
+      });
+    }
     if (env.MALWARE_SCAN_CRITICAL_SECONDS <= env.MALWARE_SCAN_WARN_SECONDS) {
       ctx.addIssue({
         code: 'custom',

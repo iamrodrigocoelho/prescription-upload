@@ -20,7 +20,10 @@ export function prescriptionFilterWhere(
     | 'linked'
   >,
 ): Prisma.PrescriptionSubmissionWhereInput {
-  const and: Prisma.PrescriptionSubmissionWhereInput[] = [scope];
+  const and: Prisma.PrescriptionSubmissionWhereInput[] = [
+    scope,
+    { disposedAt: null, disposalStartedAt: null },
+  ];
   if (query.storeId) and.push({ storeId: query.storeId });
   if (query.from || query.to) {
     and.push({

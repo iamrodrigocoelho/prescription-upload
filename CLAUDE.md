@@ -117,6 +117,14 @@ identification_status = NOT_IDENTIFIED`) + `PatientLinkHistory` + auditoria + ou
   `... rescan --retry-quarantine --apply` (retoma isolamento). O teste EICAR real requer
   `CLAMAV_REAL_TEST=1` com daemon e assinaturas; veja `docs/security/antivirus.md`.
 
+## Fase 5 — retenção (descarte bloqueado por padrão)
+
+- `pnpm --filter @receita/api retention` é somente relatório. `--apply` requer flags e
+  aprovação formal de Jurídico/DPO; veja `docs/privacy/retention.md` antes de usar.
+- Legal hold é exclusivo de Admin (`settings:manage`) e auditado. Receitas em descarte ou
+  descartadas não aparecem na fila nem abrem detalhes/URLs de anexos.
+- Não declare exclusão definitiva sem verificar versões do bucket e janela de backups.
+
 ## Convenções de código
 
 - TypeScript strict; sem `any` implícito; sem `console.*` (use o logger do Nest/pino).

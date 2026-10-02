@@ -31,6 +31,7 @@ import { PublicModule } from './modules/public/public.module.js';
 import { StoresModule } from './modules/stores/stores.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { MalwareModule } from './modules/malware/malware.module.js';
+import { RetentionModule } from './modules/retention/retention.module.js';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { MalwareModule } from './modules/malware/malware.module.js';
     RealtimeControlModule,
     AuditModule,
     MalwareModule,
+    RetentionModule,
     AuthModule,
     HealthModule,
     SettingsModule,

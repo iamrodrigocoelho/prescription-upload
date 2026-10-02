@@ -66,7 +66,12 @@ export class PrescriptionsService {
     include?: T,
   ): Promise<Prisma.PrescriptionSubmissionGetPayload<{ include: T }>> {
     const submission = await this.prisma.prescriptionSubmission.findFirst({
-      where: { AND: [{ id }, await this.scope.storeIdWhere(auth)] },
+      where: {
+        AND: [
+          { id, disposedAt: null, disposalStartedAt: null },
+          await this.scope.storeIdWhere(auth),
+        ],
+      },
       include,
     });
     if (!submission) throw new AppError(ApiErrorCode.NOT_FOUND);
@@ -79,7 +84,7 @@ export class PrescriptionsService {
     const now = new Date();
     await this.prisma.$transaction(async (tx) => {
       const first = await tx.prescriptionSubmission.updateMany({
-        where: { id, firstViewedAt: null },
+        where: { id, firstViewedAt: null, disposedAt: null, disposalStartedAt: null },
         data: { firstViewedAt: now },
       });
       if (first.count === 1) {

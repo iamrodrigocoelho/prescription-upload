@@ -57,4 +57,32 @@ describe('parseEnv', () => {
       parseEnv({ ...base, PATIENT_INTEGRATION_ENABLED: 'true', PATIENT_PROVIDER: 'http' }),
     ).toThrow(/patients-api-checklist/);
   });
+
+  it('descarte exige habilitação, aprovação e storage verificado', () => {
+    const base = {
+      ...process.env,
+      RETENTION_EXECUTION_ENABLED: undefined,
+      RETENTION_APPROVAL_REFERENCE: undefined,
+      RETENTION_STORAGE_VERSIONING: undefined,
+    };
+    expect(parseEnv(base).RETENTION_EXECUTION_ENABLED).toBe(false);
+    expect(() => parseEnv({ ...base, RETENTION_EXECUTION_ENABLED: 'true' })).toThrow(
+      /RETENTION_APPROVAL_REFERENCE/,
+    );
+    expect(() =>
+      parseEnv({
+        ...base,
+        RETENTION_EXECUTION_ENABLED: 'true',
+        RETENTION_APPROVAL_REFERENCE: 'DPO-TESTE-001',
+      }),
+    ).toThrow(/RETENTION_STORAGE_VERSIONING/);
+    expect(
+      parseEnv({
+        ...base,
+        RETENTION_EXECUTION_ENABLED: 'true',
+        RETENTION_APPROVAL_REFERENCE: 'DPO-TESTE-001',
+        RETENTION_STORAGE_VERSIONING: 'disabled',
+      }).RETENTION_EXECUTION_ENABLED,
+    ).toBe(true);
+  });
 });

@@ -32,6 +32,7 @@ Gerada/verificada por `apps/api/test/authz-coverage.e2e-spec.ts`. `Sim` signific
 | `GET /public/stores` | Sim | Sim | Sim | Sim | — | Público | Público explícito |
 | `GET /public/stores/:slug` | Sim | Sim | Sim | Sim | — | Público | Público explícito |
 | `GET /realtime/stream` | — | Sim | Sim | Sim | — | Lojas do usuário; Admin global | prescriptions:read |
+| `PATCH /admin/retention/:id/legal-hold` | — | — | — | Sim | — | Global (Admin) | settings:manage |
 | `PATCH /admin/settings` | — | — | — | Sim | — | Global (Admin) | settings:manage |
 | `PATCH /admin/stores/:id` | — | — | — | Sim | — | Global (Admin) | stores:manage |
 | `PATCH /admin/users/:id` | — | — | — | Sim | — | Global (Admin) | users:manage |

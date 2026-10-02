@@ -1,20 +1,21 @@
 import { prescriptionFilterWhere } from './prescription-filters.js';
 
 const SCOPE = { storeId: { in: ['loja-a'] } };
+const NOT_DISPOSED = { disposedAt: null, disposalStartedAt: null };
 
 describe('prescriptionFilterWhere', () => {
   it('sempre inclui o escopo como primeira condição AND', () => {
-    expect(prescriptionFilterWhere(SCOPE, {})).toEqual({ AND: [SCOPE] });
+    expect(prescriptionFilterWhere(SCOPE, {})).toEqual({ AND: [SCOPE, NOT_DISPOSED] });
   });
 
   it('storeId de outra loja é combinado com AND — nunca substitui o escopo', () => {
     const where = prescriptionFilterWhere(SCOPE, { storeId: 'loja-b' });
-    expect(where).toEqual({ AND: [SCOPE, { storeId: 'loja-b' }] });
+    expect(where).toEqual({ AND: [SCOPE, NOT_DISPOSED, { storeId: 'loja-b' }] });
   });
 
   it('Admin (escopo vazio) com filtro de loja', () => {
     expect(prescriptionFilterWhere({}, { storeId: 'loja-b' })).toEqual({
-      AND: [{}, { storeId: 'loja-b' }],
+      AND: [{}, NOT_DISPOSED, { storeId: 'loja-b' }],
     });
   });
 
@@ -31,6 +32,7 @@ describe('prescriptionFilterWhere', () => {
     });
     expect(where.AND).toEqual([
       SCOPE,
+      NOT_DISPOSED,
       {
         createdAt: { gte: new Date('2026-10-01T00:00:00Z'), lte: new Date('2026-10-02T00:00:00Z') },
       },
@@ -47,6 +49,7 @@ describe('prescriptionFilterWhere', () => {
     const where = prescriptionFilterWhere(SCOPE, { hasCpf: false, unviewed: false, linked: true });
     expect(where.AND).toEqual([
       SCOPE,
+      NOT_DISPOSED,
       { cpfHashForLookup: null },
       { firstViewedAt: { not: null } },
       { patientExternalId: { not: null } },

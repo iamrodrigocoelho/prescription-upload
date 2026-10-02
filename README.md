@@ -69,21 +69,22 @@ http://localhost:8025.
 
 ## Scripts
 
-| Comando                             | Descrição                                                            |
-| ----------------------------------- | -------------------------------------------------------------------- |
-| `pnpm dev`                          | Sobe web, API e worker em modo watch                                 |
-| `pnpm build`                        | Build de todos os pacotes                                            |
-| `pnpm lint`                         | ESLint em todo o monorepo                                            |
-| `pnpm typecheck`                    | Verificação de tipos (strict)                                        |
-| `pnpm test`                         | Testes unitários                                                     |
-| `pnpm test:e2e`                     | Testes de integração/e2e da API (requer Postgres, Valkey, SeaweedFS) |
-| `pnpm test:e2e:web`                 | E2E das telas públicas (Playwright + axe; requer infra e internet)   |
-| `pnpm db:migrate`                   | Cria/aplica migrations em desenvolvimento                            |
-| `pnpm db:migrate:deploy`            | Aplica migrations pendentes (produção/CI)                            |
-| `pnpm db:seed`                      | Popula dados de desenvolvimento                                      |
-| `pnpm db:reset`                     | Recria o banco de desenvolvimento do zero                            |
-| `pnpm format`                       | Prettier                                                             |
-| `pnpm --filter @receita/api rescan` | Relatório de re-scan; `--apply` executa após revisão                 |
+| Comando                                | Descrição                                                             |
+| -------------------------------------- | --------------------------------------------------------------------- |
+| `pnpm dev`                             | Sobe web, API e worker em modo watch                                  |
+| `pnpm build`                           | Build de todos os pacotes                                             |
+| `pnpm lint`                            | ESLint em todo o monorepo                                             |
+| `pnpm typecheck`                       | Verificação de tipos (strict)                                         |
+| `pnpm test`                            | Testes unitários                                                      |
+| `pnpm test:e2e`                        | Testes de integração/e2e da API (requer Postgres, Valkey, SeaweedFS)  |
+| `pnpm test:e2e:web`                    | E2E das telas públicas (Playwright + axe; requer infra e internet)    |
+| `pnpm db:migrate`                      | Cria/aplica migrations em desenvolvimento                             |
+| `pnpm db:migrate:deploy`               | Aplica migrations pendentes (produção/CI)                             |
+| `pnpm db:seed`                         | Popula dados de desenvolvimento                                       |
+| `pnpm db:reset`                        | Recria o banco de desenvolvimento do zero                             |
+| `pnpm format`                          | Prettier                                                              |
+| `pnpm --filter @receita/api rescan`    | Relatório de re-scan; `--apply` executa após revisão                  |
+| `pnpm --filter @receita/api retention` | Relatório de receitas vencidas; descarte requer aprovação e `--apply` |
 
 ## Worker (processamento assíncrono)
 

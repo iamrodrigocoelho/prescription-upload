@@ -294,6 +294,10 @@ model PrescriptionSubmission {
   /// Controle otimista de concorrência (PATCH /status).
   version                Int                  @default(0)
   retentionUntil         DateTime             @map("retention_until") @db.Timestamptz(3)
+  legalHoldAt            DateTime?            @map("legal_hold_at") @db.Timestamptz(3)
+  legalHoldByUserId      String?              @map("legal_hold_by_user_id") @db.Uuid
+  disposalStartedAt      DateTime?            @map("disposal_started_at") @db.Timestamptz(3)
+  disposedAt             DateTime?            @map("disposed_at") @db.Timestamptz(3)
   createdAt              DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt              DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -310,6 +314,7 @@ model PrescriptionSubmission {
   @@index([createdAt(sort: Desc), id])
   @@index([cpfHashForLookup])
   @@index([retentionUntil])
+  @@index([retentionUntil, disposedAt, legalHoldAt])
   @@map("prescription_submissions")
 }
 
