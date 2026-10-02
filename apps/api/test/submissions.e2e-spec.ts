@@ -97,9 +97,11 @@ describe('Envio público de receitas (e2e)', () => {
         expect(stored.storageKey).not.toContain('receita');
         expect(await objectExists(stored.storageKey)).toBe(true);
       }
-      expect(submission.files.map((f) => f.mimeType).sort()).toEqual([
-        'application/pdf',
-        'image/jpeg',
+      // Ordem de envio preservada (JPEG enviado primeiro, PDF depois).
+      const ordered = [...submission.files].sort((x, y) => x.position - y.position);
+      expect(ordered.map((f) => [f.position, f.mimeType])).toEqual([
+        [1, 'image/jpeg'],
+        [2, 'application/pdf'],
       ]);
       const days = (submission.retentionUntil.getTime() - Date.now()) / 86_400_000;
       expect(Math.round(days)).toBe(365);

@@ -312,6 +312,8 @@ model PrescriptionSubmission {
 model PrescriptionFile {
   id                  String               @id @default(uuid()) @db.Uuid
   submissionId        String               @map("submission_id") @db.Uuid
+  /// Ordem do anexo no envio (1, 2, …) — o horário de criação empata entre anexos.
+  position            Int                  @default(1)
   /// Chave interna gerada pelo sistema (nunca derivada do nome original).
   storageKey          String               @unique @map("storage_key") @db.VarChar(512)
   originalFilename    String               @map("original_filename") @db.VarChar(255)
@@ -330,7 +332,7 @@ model PrescriptionFile {
 
   submission PrescriptionSubmission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
 
-  @@index([submissionId])
+  @@index([submissionId, position])
   @@map("prescription_files")
 }
 

@@ -231,9 +231,14 @@ export class SubmissionsService {
           ? await this.links.consumeWithin(tx, context.link.linkId, createSubmission)
           : await createSubmission();
         const rows = await Promise.all(
-          files.map((file) =>
+          files.map((file, index) =>
             tx.prescriptionFile.create({
-              data: { submissionId: submission.id, ...file, malwareScanStatus: 'PENDING' },
+              data: {
+                submissionId: submission.id,
+                ...file,
+                position: index + 1,
+                malwareScanStatus: 'PENDING',
+              },
               select: { id: true, storageKey: true, mimeType: true },
             }),
           ),

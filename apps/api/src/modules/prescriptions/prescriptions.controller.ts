@@ -1,15 +1,17 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
   type ListPrescriptionsQuery,
   listPrescriptionsQuerySchema,
   Permission,
   type PrescriptionCounters,
   type PrescriptionCountersQuery,
+  type PrescriptionDetail,
   prescriptionCountersQuerySchema,
   type PrescriptionListResponse,
 } from '@receita/shared';
 import { CurrentAuth, RequirePermissions } from '../../common/auth/decorators.js';
 import type { AuthContext } from '../../common/auth/auth.types.js';
+import { UuidParamPipe } from '../../common/pipes/uuid-param.pipe.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { PrescriptionsService } from './prescriptions.service.js';
 
@@ -32,5 +34,13 @@ export class PrescriptionsController {
     @Query(new ZodValidationPipe(prescriptionCountersQuerySchema)) query: PrescriptionCountersQuery,
   ): Promise<PrescriptionCounters> {
     return this.prescriptions.counters(auth, query);
+  }
+
+  @Get(':id')
+  detail(
+    @CurrentAuth() auth: AuthContext,
+    @Param('id', UuidParamPipe) id: string,
+  ): Promise<PrescriptionDetail> {
+    return this.prescriptions.detail(auth, id);
   }
 }

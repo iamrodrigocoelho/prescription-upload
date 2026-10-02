@@ -115,6 +115,7 @@ export async function createSubmission(
         create: (options.files ?? [{}]).map((file, index) => ({
           storageKey: file.storageKey ?? `test/${randomBytes(8).toString('hex')}-${index}`,
           originalFilename: `receita-${index + 1}.jpg`,
+          position: index + 1,
           mimeType: file.mimeType ?? 'image/jpeg',
           sizeBytes: 1234,
           checksum: 'a'.repeat(64),

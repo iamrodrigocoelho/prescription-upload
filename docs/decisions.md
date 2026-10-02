@@ -340,3 +340,9 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 - **Data:** 2026-10-01
 - **Decisão:** `GET /prescriptions` com cursor opaco `(created_at, id)` em base64url (estável sob inserções concorrentes; adulterado → 400), `limit` ≤ 50, ordem `desc` (padrão) ou `asc`. Filtros do PRD §12.3 validados com Zod (`.strict()`); o escopo do usuário é sempre a primeira condição `AND` e o filtro de loja só a restringe (store de outra loja → lista vazia). CPF exibido apenas mascarado (decifrado no servidor só para mascarar); paciente apenas pelo rótulo mascarado. Contadores (Novas, Sem paciente, Em atendimento, Finalizadas) respeitam escopo, loja e período.
 - **Validação (EXPLAIN ANALYZE, 100 mil receitas em 100 lojas):** fila por loja → _Index Only Scan_ em `(store_id, created_at DESC, id)` (0,37 ms); não visualizadas → índice parcial `WHERE first_viewed_at IS NULL`; contador por status → `(store_id, operational_status, created_at DESC)`; fila global do Admin → `(created_at DESC, id)`. Nenhum _Seq Scan_.
+
+## D-060 — Ordem dos anexos
+
+- **Data:** 2026-10-01
+- **Contexto:** anexos de um envio são gravados no mesmo instante; ordenar por `(created_at, id)` desempatava pelo UUID aleatório e a posição ("Arquivo 1/2") mudava entre aberturas (detectado por teste intermitente).
+- **Decisão:** coluna `prescription_files.position` gravada no envio (ordem do multipart), índice `(submission_id, position)` e backfill dos registros existentes por ordem de criação.
