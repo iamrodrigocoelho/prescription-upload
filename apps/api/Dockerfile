@@ -8,6 +8,7 @@ RUN npm install -g pnpm@11.1.3
 WORKDIR /repo
 COPY . .
 RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @receita/api db:generate
 RUN pnpm --filter @receita/api... build
 RUN pnpm --filter @receita/api deploy --prod --legacy /out \
   && cp -r apps/api/dist /out/dist \
@@ -17,6 +18,8 @@ RUN pnpm --filter @receita/api deploy --prod --legacy /out \
 FROM node:24.21.0-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-v* \
+  && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg
 COPY --from=build --chown=node:node /out .
 USER node
 EXPOSE 4000

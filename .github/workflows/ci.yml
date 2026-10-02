@@ -76,6 +76,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     permissions:
+      actions: read
       contents: read
       security-events: write
     steps:
@@ -110,6 +111,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Build production image
+        id: build
         run: docker build -f apps/${{ matrix.image }}/Dockerfile -t receita-${{ matrix.image }}:ci .
       - name: Fail on high or critical image vulnerabilities
         uses: aquasecurity/trivy-action@v0.36.0
@@ -121,7 +123,7 @@ jobs:
           exit-code: '1'
           format: table
       - name: Generate CycloneDX SBOM
-        if: success() || failure()
+        if: ${{ steps.build.outcome == 'success' && (success() || failure()) }}
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: receita-${{ matrix.image }}:ci
@@ -130,7 +132,7 @@ jobs:
           output: sbom-${{ matrix.image }}.cdx.json
           exit-code: '0'
       - uses: actions/upload-artifact@v4
-        if: success() || failure()
+        if: ${{ steps.build.outcome == 'success' && (success() || failure()) }}
         with:
           name: sbom-${{ matrix.image }}
           path: sbom-${{ matrix.image }}.cdx.json
