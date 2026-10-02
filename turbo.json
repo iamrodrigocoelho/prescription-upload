@@ -29,6 +29,11 @@
     "db:generate": {
       "inputs": ["prisma/schema.prisma"],
       "outputs": ["src/generated/**"]
+    },
+    "dev:worker": {
+      "dependsOn": ["^build", "db:generate"],
+      "cache": false,
+      "persistent": true
     }
   }
 }

@@ -142,6 +142,12 @@ export class S3StorageProvider extends StorageProvider implements OnModuleInit {
     }
   }
 
+  async getObject(key: string): Promise<Buffer> {
+    const result = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+    if (!result.Body) throw new Error('Objeto sem conteúdo');
+    return Buffer.from(await result.Body.transformToByteArray());
+  }
+
   async deleteObject(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }

@@ -351,3 +351,15 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 
 - **Data:** 2026-10-01
 - **Decisão (aprovada):** `view-url` (`inline`; variantes `original`, `preview`, `thumbnail`) e `download-url` (`attachment`, sempre o original) são gerados só após o escopo da receita **e** o vínculo arquivo↔receita (IDOR → 404); TTL `SIGNED_URL_TTL_SECONDS`; respostas `no-store`; a URL nunca é logada (corpos de resposta não são logados; Caddy remove a query do log do storage). O nome no `Content-Disposition` é genérico (`receita-<id>-<posição>.<ext>`) para que o nome original não apareça na URL. As URLs usam `STORAGE_PUBLIC_ENDPOINT` (subdomínio servido pelo proxy de borda preservando o `Host`); a CSP do Admin libera apenas essa origem. Auditoria: `prescription.file_viewed` e `prescription.file_downloaded` com usuário, perfil, receita, arquivo, data/hora e loja (PRD §13.2, CA-009). Revelação de CPF conforme D-056.
+
+## D-057 — Status de varredura `NOT_SCANNED`
+
+- **Data:** 2026-10-01
+- **Decisão (aprovada):** o worker grava `NOT_SCANNED` (diferente de `PENDING`) quando processa um arquivo com o scanner no-op. Visualização e download: **bloqueados** apenas `INFECTED`; liberados `CLEAN`, `NOT_SCANNED` e `PENDING` (este com o rótulo "Verificação pendente" na interface). A interface `MalwareScanner.scan()` devolve o status; o adapter real (pendente, PRD §42.12) devolverá `CLEAN`/`INFECTED`.
+
+## D-062 — Processamento assíncrono de anexos e conversão de HEIC
+
+- **Data:** 2026-10-01
+- **Decisão:** BullMQ (MIT) sobre o Redis/Valkey existente, fila `attachments`, job por receita (`jobId` determinístico, deduplicação; concluídos mantidos 24 h), 5 tentativas com backoff exponencial; esgotadas → `processing_status = FAILED` e o anexo segue com download. Worker em processo separado (`node dist/worker.js`; mesma imagem da API com outro comando), com dispatcher do outbox (`FOR UPDATE SKIP LOCKED`, várias instâncias) e **reconciliação** a cada minuto (reenfileira anexos pendentes há mais de 2 min). Derivados: HEIC/HEIF → JPEG de visualização (lado maior ≤ 2400 px) com `heic-decode` (ISC) + `libheif-js` (**LGPL-3.0**, WASM) e `sharp` (Apache-2.0); miniaturas JPEG (≤ 320 px) para imagens; PDFs sem derivados. Derivados re-codificados **sem metadados** (EXIF/GPS removidos) e gravados em chaves determinísticas `derivatives/{fileId}/…` (reprocessar sobrescreve, sem órfãos). O original nunca é alterado e é sempre o que vai no download.
+- **Impacto:** `sharp` sozinho não decodifica HEIC/HEVC (libvips pré-compilado sem HEVC por patentes); a decodificação em WASM é mais lenta (~1–3 s por foto de celular), aceitável em background. **Pendente (Jurídico):** validar a licença LGPL (uso server-side, sem distribuição) e eventuais questões de patente do HEVC.
+- **Descartado:** conversão no navegador (dispositivos fracos, inconsistência) e `heic-convert` (mesma base, sem vantagem).

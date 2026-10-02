@@ -40,6 +40,8 @@ export abstract class StorageProvider {
   abstract putObjectStream(input: PutObjectStreamInput): Promise<void>;
   abstract getSignedUrl(key: string, options: SignedUrlOptions): Promise<string>;
   abstract headObject(key: string): Promise<ObjectInfo | null>;
+  /** Leitura completa (processamento interno de anexos de até 5 MB). */
+  abstract getObject(key: string): Promise<Buffer>;
   abstract deleteObject(key: string): Promise<void>;
   /** Verifica se o bucket está acessível (readiness). */
   abstract ping(): Promise<void>;

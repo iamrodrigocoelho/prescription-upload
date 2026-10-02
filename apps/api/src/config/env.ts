@@ -102,6 +102,10 @@ export const envSchema = z
       z.string().min(32).optional(),
     ),
 
+    // Worker (fila de anexos e outbox)
+    OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().min(100).max(10_000).default(500),
+    ATTACHMENTS_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(2),
+
     // Pacientes
     PATIENT_PROVIDER: z.enum(['mock', 'none']).default('none'),
 

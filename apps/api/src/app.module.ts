@@ -15,7 +15,6 @@ import { RedisModule } from './infra/redis/redis.module.js';
 import { StorageModule } from './infra/storage/storage.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CaptchaModule } from './modules/captcha/captcha.module.js';
-import { MalwareModule } from './modules/malware/malware.module.js';
 import { OutboxModule } from './modules/outbox/outbox.module.js';
 import { SubmissionsModule } from './modules/submissions/submissions.module.js';
 import { PrismaModule } from './infra/prisma/prisma.module.js';
@@ -44,7 +43,6 @@ import { UsersModule } from './modules/users/users.module.js';
     StorageModule,
     MetricsModule,
     CaptchaModule,
-    MalwareModule,
     OutboxModule,
     AuditModule,
     AuthModule,
