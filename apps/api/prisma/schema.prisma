@@ -263,6 +263,8 @@ model PatientUploadLink {
 
   @@index([storeId, createdAt])
   @@index([status, expiresAt])
+  /// Dashboard: links ativos/expirados por loja (D-077).
+  @@index([storeId, status, expiresAt])
   @@map("patient_upload_links")
 }
 

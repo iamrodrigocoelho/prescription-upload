@@ -22,6 +22,7 @@ import { AuditModule } from './modules/audit/audit.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
 import { PatientLinksModule } from './modules/patient-links/patient-links.module.js';
+import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { PatientsModule } from './modules/patients/patients.module.js';
 import { PrescriptionsModule } from './modules/prescriptions/prescriptions.module.js';
 import { RealtimeControlModule } from './modules/realtime/realtime-control.js';
@@ -54,6 +55,7 @@ import { UsersModule } from './modules/users/users.module.js';
     UsersModule,
     StoresModule,
     PatientsModule,
+    DashboardModule,
     PatientLinksModule,
     PublicModule,
     SubmissionsModule,

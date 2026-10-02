@@ -18,3 +18,4 @@ export * from './upload.js';
 export * from './schemas/public.js';
 export * from './status-matrix.js';
 export * from './schemas/prescriptions.js';
+export * from './schemas/dashboard.js';

@@ -104,6 +104,21 @@ export const envSchema = z
       z.string().min(32).optional(),
     ),
 
+    /** Fuso do sistema para "hoje" e agrupamentos por dia (D-077). Nunca UTC implícito. */
+    APP_TIMEZONE: z
+      .string()
+      .default('America/Sao_Paulo')
+      .refine((zone) => {
+        try {
+          new Intl.DateTimeFormat('en-CA', { timeZone: zone });
+          return true;
+        } catch {
+          return false;
+        }
+      }, 'fuso horário IANA inválido'),
+    /** Intervalo máximo do período personalizado do dashboard (dias). */
+    DASHBOARD_MAX_RANGE_DAYS: z.coerce.number().int().min(1).max(730).default(90),
+
     // Tempo real (SSE)
     REALTIME_HEARTBEAT_SECONDS: z.coerce.number().int().min(5).max(60).default(15),
     REALTIME_REVALIDATE_SECONDS: z.coerce.number().int().min(5).max(300).default(30),
