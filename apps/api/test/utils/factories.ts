@@ -72,3 +72,59 @@ export async function createUser(
   });
   return { user, totpSecret };
 }
+
+export interface CreateSubmissionOptions {
+  storeId: string;
+  cpf?: string;
+  operationalStatus?:
+    'RECEIVED' | 'IN_REVIEW' | 'IN_SERVICE' | 'FINISHED' | 'CANCELLED' | 'NOT_SERVED';
+  identificationStatus?: 'NOT_IDENTIFIED' | 'IDENTIFIED_PERSONALIZED_LINK' | 'IDENTIFIED_MANUAL';
+  sourceChannel?: 'GENERIC' | 'STORE_LINK' | 'PERSONALIZED_LINK';
+  createdAt?: Date;
+  firstViewedAt?: Date | null;
+  patient?: { externalId: string; label: string };
+  files?: {
+    storageKey?: string;
+    mimeType?: string;
+    malwareScanStatus?: 'PENDING' | 'NOT_SCANNED' | 'CLEAN' | 'INFECTED';
+  }[];
+}
+
+/** Receita criada direto no banco (sem passar pelo upload público). */
+export async function createSubmission(
+  prisma: PrismaService,
+  crypto: CryptoService,
+  options: CreateSubmissionOptions,
+) {
+  return prisma.prescriptionSubmission.create({
+    data: {
+      storeId: options.storeId,
+      cpfEncrypted: options.cpf ? crypto.encryptCpf(options.cpf) : null,
+      cpfHashForLookup: options.cpf ? crypto.cpfLookupHash(options.cpf) : null,
+      operationalStatus: options.operationalStatus ?? 'RECEIVED',
+      identificationStatus:
+        options.identificationStatus ??
+        (options.patient ? 'IDENTIFIED_PERSONALIZED_LINK' : 'NOT_IDENTIFIED'),
+      sourceChannel: options.sourceChannel ?? 'STORE_LINK',
+      patientExternalId: options.patient?.externalId ?? null,
+      patientDisplayLabel: options.patient?.label ?? null,
+      firstViewedAt: options.firstViewedAt ?? null,
+      retentionUntil: new Date(Date.now() + 365 * 86_400_000),
+      ...(options.createdAt ? { createdAt: options.createdAt } : {}),
+      files: {
+        create: (options.files ?? [{}]).map((file, index) => ({
+          storageKey: file.storageKey ?? `test/${randomBytes(8).toString('hex')}-${index}`,
+          originalFilename: `receita-${index + 1}.jpg`,
+          mimeType: file.mimeType ?? 'image/jpeg',
+          sizeBytes: 1234,
+          checksum: 'a'.repeat(64),
+          malwareScanStatus: file.malwareScanStatus ?? 'NOT_SCANNED',
+        })),
+      },
+      statusHistory: {
+        create: { fromStatus: null, toStatus: options.operationalStatus ?? 'RECEIVED' },
+      },
+    },
+    include: { files: true },
+  });
+}
