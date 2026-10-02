@@ -4,6 +4,7 @@ import request from 'supertest';
 import { CryptoService } from '../src/infra/crypto/crypto.service.js';
 import { StorageProvider } from '../src/infra/storage/storage.provider.js';
 import { MOCK_PATIENTS } from '../src/modules/patients/mock-patient.provider.js';
+import { createPatientLink } from './utils/patients.js';
 import { createTestContext, type TestContext } from './utils/app.js';
 import { captchaToken } from './utils/fake-captcha.js';
 import { createStore, createUser } from './utils/factories.js';
@@ -56,9 +57,7 @@ describe('Envio público de receitas (e2e)', () => {
 
   async function createPersonalizedLink(storeId: string) {
     const admin = await loginAs(ctx.app, () => createUser(ctx.prisma, crypto, { role: 'ADMIN' }));
-    const res = await admin
-      .post('/admin/patient-links', { storeId, patientExternalId: PATIENT.externalId })
-      .expect(201);
+    const res = await createPatientLink(admin, storeId, PATIENT).expect(201);
     return {
       token: /\/p\/([A-Za-z0-9_-]{43})$/.exec(res.body.url as string)?.[1] ?? '',
       id: res.body.link.id as string,

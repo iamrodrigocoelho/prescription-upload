@@ -2,6 +2,7 @@ import { AuditAction } from '@receita/shared';
 import request from 'supertest';
 import { CryptoService } from '../src/infra/crypto/crypto.service.js';
 import { MOCK_PATIENTS } from '../src/modules/patients/mock-patient.provider.js';
+import { createPatientLink } from './utils/patients.js';
 import { createTestContext, type TestContext } from './utils/app.js';
 import { createStore, createUser } from './utils/factories.js';
 import { loginAs } from './utils/http.js';
@@ -81,9 +82,7 @@ describe('Contexto público (e2e)', () => {
   describe('GET /public/patient-links/:token', () => {
     async function createLinkToken(storeId: string) {
       const admin = await loginAs(ctx.app, () => createUser(ctx.prisma, crypto, { role: 'ADMIN' }));
-      const res = await admin
-        .post('/admin/patient-links', { storeId, patientExternalId: MOCK_PATIENTS[0]!.externalId })
-        .expect(201);
+      const res = await createPatientLink(admin, storeId).expect(201);
       return {
         token: /\/p\/([A-Za-z0-9_-]{43})$/.exec(res.body.url as string)?.[1] ?? '',
         id: res.body.link.id as string,

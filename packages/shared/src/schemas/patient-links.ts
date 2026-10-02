@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { PatientUploadLinkStatus } from '../enums.js';
 import { uuidSchema } from './common.js';
 import { paginationSchema } from './pagination.js';
+import { selectionRefSchema } from './patients.js';
 
 /** Opções de validade oferecidas na geração (D-013), limitadas pelo máximo configurado. */
 export const PATIENT_LINK_EXPIRY_OPTIONS = [1, 3, 7, 15, 30] as const;
@@ -9,7 +10,8 @@ export const PATIENT_LINK_EXPIRY_OPTIONS = [1, 3, 7, 15, 30] as const;
 export const createPatientLinkSchema = z
   .object({
     storeId: uuidSchema,
-    patientExternalId: z.string().trim().min(1).max(128),
+    /** Referência opaca devolvida pela busca no contexto desta loja (D-069). */
+    selectionRef: selectionRefSchema,
     /** Ausente: usa o padrão configurado (SystemSetting). */
     expiresInDays: z.number().int().min(1).max(90).optional(),
   })

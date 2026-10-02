@@ -20,9 +20,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../infra/prisma/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { StoreScopeService } from '../auth/store-scope.service.js';
-import { patientDisplayLabel } from '../patients/patient-display.js';
-import { callProvider } from '../patients/patient-errors.js';
-import { PatientProvider } from '../patients/patient.provider.js';
+import { PatientSelectionService } from '../patients/patient-selection.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { storeAcceptsSubmissions } from '../stores/stores.service.js';
 import { generatePatientLinkToken } from './patient-link-token.js';
@@ -72,7 +70,7 @@ export class PatientLinksService {
     private readonly prisma: PrismaService,
     private readonly scope: StoreScopeService,
     private readonly settings: SettingsService,
-    private readonly patients: PatientProvider,
+    private readonly selections: PatientSelectionService,
     private readonly audit: AuditService,
     @Inject(ENV) private readonly env: Env,
   ) {}
@@ -111,14 +109,10 @@ export class PatientLinksService {
       ]);
     }
 
-    const patient = await callProvider(() =>
-      this.patients.findByExternalId(input.patientExternalId),
-    );
-    if (!patient) {
-      throw new AppError(ApiErrorCode.VALIDATION_FAILED, undefined, [
-        { path: 'patientExternalId', message: 'Paciente não encontrado.' },
-      ]);
-    }
+    // O paciente vem da seleção feita na busca deste contexto (D-069), nunca do cliente.
+    const selection = await this.selections.resolve(auth, input.selectionRef, {
+      storeId: store.id,
+    });
 
     const { token, tokenHash } = generatePatientLinkToken();
     const expiresAt = new Date(Date.now() + days * DAY_MS);
@@ -127,8 +121,8 @@ export class PatientLinksService {
       const created = await tx.patientUploadLink.create({
         data: {
           storeId: store.id,
-          patientExternalId: patient.externalId,
-          patientDisplayLabel: patientDisplayLabel(patient),
+          patientExternalId: selection.patientExternalId,
+          patientDisplayLabel: selection.patientDisplayLabel,
           tokenHash,
           createdByUserId: auth.user.id,
           expiresAt,
@@ -142,7 +136,7 @@ export class PatientLinksService {
           entityId: created.id,
           storeId: store.id,
           metadata: {
-            patientExternalId: patient.externalId,
+            patientExternalId: selection.patientExternalId,
             expiresInDays: days,
             expiresAt: expiresAt.toISOString(),
           },
@@ -151,6 +145,7 @@ export class PatientLinksService {
       );
       return created;
     });
+    await this.selections.consume(selection);
 
     return { link: toView(link), url: `${this.env.PUBLIC_APP_URL}/p/${token}` };
   }

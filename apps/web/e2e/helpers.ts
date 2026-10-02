@@ -43,9 +43,16 @@ export async function inactiveStore(): Promise<SeedStore & { slug: string }> {
 /** Gera um link personalizado pelo Admin e devolve o path /p/{token}. */
 export async function createPersonalizedLinkPath(storeId: string): Promise<string> {
   const { api, csrf } = await adminApi();
+  // Fluxo real: busca no contexto da loja → referência opaca → geração (D-069).
+  const search = await api.post('/api/patients/search', {
+    headers: { 'X-CSRF-Token': csrf },
+    data: { type: 'email', query: 'joao.teste@example.com', context: { storeId } },
+  });
+  expect(search.status()).toBe(200);
+  const { results } = (await search.json()) as { results: { selectionRef: string }[] };
   const res = await api.post('/api/admin/patient-links', {
     headers: { 'X-CSRF-Token': csrf },
-    data: { storeId, patientExternalId: 'mock-pat-0001' },
+    data: { storeId, selectionRef: results[0]?.selectionRef },
   });
   expect(res.status()).toBe(201);
   const { url } = (await res.json()) as { url: string };

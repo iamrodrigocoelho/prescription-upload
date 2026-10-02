@@ -3,7 +3,7 @@ import type { Redis } from 'ioredis';
 import request from 'supertest';
 import { CryptoService } from '../src/infra/crypto/crypto.service.js';
 import { REDIS } from '../src/infra/redis/redis.module.js';
-import { MOCK_PATIENTS } from '../src/modules/patients/mock-patient.provider.js';
+import { createPatientLink } from './utils/patients.js';
 import { createTestContext, type TestContext } from './utils/app.js';
 import { captchaToken } from './utils/fake-captcha.js';
 import { createStore, createUser } from './utils/factories.js';
@@ -30,12 +30,7 @@ describe('Link personalizado via cookie de contexto (e2e, D-047)', () => {
   async function newLink() {
     const store = await createStore(ctx.prisma, { storeName: 'Venancio Méier' });
     const admin = await loginAs(ctx.app, () => createUser(ctx.prisma, crypto, { role: 'ADMIN' }));
-    const res = await admin
-      .post('/admin/patient-links', {
-        storeId: store.id,
-        patientExternalId: MOCK_PATIENTS[0]!.externalId,
-      })
-      .expect(201);
+    const res = await createPatientLink(admin, store.id).expect(201);
     return {
       store,
       id: res.body.link.id as string,

@@ -35,10 +35,6 @@ export class HttpPatientProvider extends PatientProvider {
     return this.pending();
   }
 
-  findByExternalId(): Promise<PatientSummary | null> {
-    return this.pending();
-  }
-
   private pending(): Promise<never> {
     void this.config;
     return Promise.reject(

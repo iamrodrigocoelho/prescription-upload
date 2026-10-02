@@ -402,3 +402,16 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 - **Data:** 2026-10-02
 - **Decisão:** `PATIENT_INTEGRATION_ENABLED` (padrão **false**): desligada, o provider responde indisponibilidade e nada mais quebra. `PATIENT_PROVIDER=mock|http` (mock proibido em produção). Não existe especificação em `docs/integrations/`, então o `HttpPatientProvider` é apenas um esqueleto (configuração por env: `PATIENT_API_BASE_URL`, `PATIENT_API_TOKEN`, timeouts); ligar a integração com `http` **falha na inicialização** até o contrato ser implementado (`docs/integrations/patients-api-checklist.md`). `findByExternalId` permanece no contrato apenas até a etapa 2 (referência opaca). Telefone normalizado no `shared` (somente dígitos, DDD + número, sem DDI 55).
 - **Descartado:** inventar endpoints/formatos; adapter HTTP que falharia silenciosamente em produção.
+
+## D-069 — Referência opaca de seleção de paciente
+
+- **Data:** 2026-10-02
+- **Contexto:** a geração de link (Fase 1) recebia `patientExternalId` do navegador (revalidado com `findByExternalId`) e a busca devolvia esse ID ao cliente.
+- **Decisão (aprovada):** a busca devolve, por resultado, um `selectionRef` aleatório (32 bytes, base64url) e **nenhum ID de paciente**. No Redis (chave = SHA-256 da referência, TTL `PATIENT_SELECTION_TTL_SECONDS`, 10 min) ficam usuário, sessão, contexto da busca, `patient_external_id` e o rótulo mascarado. Vínculo manual e geração de link recebem apenas `selectionRef`; o backend resolve o paciente. Referência malformada, expirada, de outro usuário, de outra sessão ou de outro contexto → o mesmo 400 neutro ("A seleção do paciente expirou. Faça a busca novamente."); uso fora do dono/contexto incrementa `security_events_total{type="patient_selection_mismatch"}`. Uso único: descartada após a ação concluir. `POST /admin/patient-links` passa a aceitar `{storeId, selectionRef, expiresInDays}` (schema estrito: `patientExternalId` → 400). `findByExternalId` saiu do contrato do provider (uma exigência a menos para a API real); o rótulo do link vem da busca recém-feita.
+- **Descartado:** aceitar `patient_external_id` do cliente com revalidação na API (permite vincular IDs arbitrários obtidos fora do fluxo e expõe IDs no navegador).
+
+## D-070 — Busca de pacientes vinculada a contexto
+
+- **Data:** 2026-10-02
+- **Decisão (aprovada):** `POST /patients/search` exige `context`: `{prescriptionId}` (vínculo) ou `{storeId}` (geração de link). Validado **antes** de consultar a API: receita no escopo (senão 404) e sem paciente vinculado (senão 409); loja no escopo (senão 403, como no restante do módulo de links), aceitando envios (senão 409) e permissão de gerar links. A auditoria da busca registra a loja do contexto, o tipo de contexto e, para receitas, o ID. Mantido `POST` (D-011, decisão E): o termo não vai na URL. No web, o componente `PatientSearch` é compartilhado entre a geração de link e o vínculo manual; trocar a loja limpa busca e seleção.
+- **Descartado:** busca livre sem contexto (vira ferramenta de consulta à base de pacientes).

@@ -31,9 +31,6 @@ class ScriptedProvider extends PatientProvider {
   searchByEmail(): Promise<PatientSummary[]> {
     return this.searchByCpf();
   }
-  findByExternalId(): Promise<PatientSummary | null> {
-    return Promise.resolve(null);
-  }
 }
 
 const ok = () => Promise.resolve([SUMMARY]);

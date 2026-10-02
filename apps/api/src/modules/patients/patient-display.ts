@@ -1,4 +1,4 @@
-import { maskCpf, maskEmail, maskName, maskPhone, type PatientSearchResult } from '@receita/shared';
+import { maskCpf, maskEmail, maskName, maskPhone } from '@receita/shared';
 import type { PatientSummary } from './patient.provider.js';
 
 /** Registro bruto como um adapter o recebe da API (existe apenas em memória, no adapter). */
@@ -23,10 +23,6 @@ export function toPatientSummary(raw: RawPatient): PatientSummary {
     phoneMasked: raw.phone ? maskPhone(raw.phone) : null,
     emailMasked: raw.email ? maskEmail(raw.email) : null,
   };
-}
-
-export function toSearchResult(patient: PatientSummary): PatientSearchResult {
-  return { ...patient };
 }
 
 /** Rótulo persistido no link e na receita (D-010). */

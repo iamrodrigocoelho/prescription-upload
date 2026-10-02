@@ -34,8 +34,7 @@ export interface PatientProviderObserver {
   circuit(state: CircuitState): void;
 }
 
-type Operation =
-  'searchByCpf' | 'searchByPhone' | 'searchByEmail' | 'findByCpf' | 'findByExternalId';
+type Operation = 'searchByCpf' | 'searchByPhone' | 'searchByEmail' | 'findByCpf';
 
 /** Falha transitória: indisponibilidade, timeout ou erro inesperado (rede, parse). */
 function isTransient(error: unknown): boolean {
@@ -118,10 +117,6 @@ export class ResilientPatientProvider extends PatientProvider {
   override findByCpf(cpf: string): Promise<PatientSummary | null> {
     // Delega ao adapter (que pode ter consulta exata), com a mesma proteção.
     return this.run('findByCpf', () => this.inner.findByCpf(cpf));
-  }
-
-  findByExternalId(externalId: string): Promise<PatientSummary | null> {
-    return this.run('findByExternalId', () => this.inner.findByExternalId(externalId));
   }
 
   private async run<T>(operation: Operation, call: () => Promise<T>): Promise<T> {

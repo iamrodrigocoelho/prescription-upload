@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { normalizePhone, patientSearchSchema } from './schemas/patients.js';
+import { normalizePhone, patientSearchSchema as base } from './schemas/patients.js';
+
+const context = { storeId: '0b8f5f8e-3b44-4d6f-9a3f-2f5d9b9d1c11' };
+const patientSearchSchema = {
+  parse: (input: object) => base.parse({ ...input, context }),
+  safeParse: (input: object) => base.safeParse({ ...input, context }),
+};
 
 describe('normalização da busca de pacientes', () => {
   it('telefone: somente dígitos, sem DDI 55', () => {
@@ -28,5 +34,26 @@ describe('normalização da busca de pacientes', () => {
   it('e-mail em minúsculas e sem espaços', () => {
     const parsed = patientSearchSchema.parse({ type: 'email', query: '  Joao.Teste@Example.COM ' });
     expect(parsed.query).toBe('joao.teste@example.com');
+  });
+
+  it('exige exatamente um contexto válido (receita ou loja)', () => {
+    const query = { type: 'email', query: 'a@example.com' };
+    expect(base.safeParse(query).success).toBe(false);
+    expect(
+      base.safeParse({
+        ...query,
+        context: { storeId: context.storeId, prescriptionId: context.storeId },
+      }).success,
+    ).toBe(false);
+    expect(base.safeParse({ ...query, context: { prescriptionId: 'x' } }).success).toBe(false);
+    expect(base.safeParse({ ...query, context: { prescriptionId: context.storeId } }).success).toBe(
+      true,
+    );
+  });
+
+  it('recusa campos extras (ex.: externalId enviado pelo cliente)', () => {
+    expect(
+      base.safeParse({ type: 'cpf', query: '529.982.247-25', context, externalId: 'x' }).success,
+    ).toBe(false);
   });
 });

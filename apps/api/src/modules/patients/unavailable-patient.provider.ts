@@ -19,7 +19,4 @@ export class UnavailablePatientProvider extends PatientProvider {
   searchByEmail(): Promise<PatientSummary[]> {
     return unavailable();
   }
-  findByExternalId(): Promise<PatientSummary | null> {
-    return unavailable();
-  }
 }

@@ -44,10 +44,4 @@ export abstract class PatientProvider {
     const results = await this.searchByCpf(cpf);
     return results.length === 1 ? results[0]! : null;
   }
-
-  /**
-   * Temporário: revalida o paciente escolhido na geração de link. Sai do contrato
-   * quando a geração passar a usar a referência opaca de seleção (Fase 4, etapa 2).
-   */
-  abstract findByExternalId(externalId: string): Promise<PatientSummary | null>;
 }

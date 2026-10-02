@@ -1,16 +1,18 @@
 import { createHash } from 'node:crypto';
 import { ApiErrorCode, AuditAction } from '@receita/shared';
 import { CryptoService } from '../src/infra/crypto/crypto.service.js';
-import { MOCK_PATIENTS } from '../src/modules/patients/mock-patient.provider.js';
 import { PatientLinkAccessService } from '../src/modules/patient-links/patient-link-access.service.js';
 import { createTestContext, type TestContext } from './utils/app.js';
-import { createStore, createUser } from './utils/factories.js';
-import { type Client, loginAs } from './utils/http.js';
+import { createStore, createSubmission, createUser } from './utils/factories.js';
+import { Client, loginAs } from './utils/http.js';
+import {
+  createPatientLink,
+  JOAO,
+  MARIA,
+  selectPatient,
+  unknownSelectionRef,
+} from './utils/patients.js';
 
-const [JOAO, MARIA] = MOCK_PATIENTS as [
-  (typeof MOCK_PATIENTS)[number],
-  (typeof MOCK_PATIENTS)[number],
-];
 const TOKEN_URL = /^http:\/\/localhost:3000\/p\/([A-Za-z0-9_-]{43})$/;
 
 describe('Links personalizados (e2e)', () => {
@@ -41,12 +43,7 @@ describe('Links personalizados (e2e)', () => {
     return { storeA, storeB, collaboratorA };
   }
 
-  const createLink = (
-    client: Client,
-    storeId: string,
-    patientExternalId = JOAO.externalId,
-    extra = {},
-  ) => client.post('/admin/patient-links', { storeId, patientExternalId, ...extra });
+  const createLink = createPatientLink;
 
   const tokenOf = (url: string): string => TOKEN_URL.exec(url)?.[1] ?? '';
 
@@ -107,13 +104,11 @@ describe('Links personalizados (e2e)', () => {
 
     it('aceita validade dentro do máximo e rejeita acima', async () => {
       const { storeA, collaboratorA } = await setup();
-      const ok = await createLink(collaboratorA, storeA.id, JOAO.externalId, {
+      const ok = await createLink(collaboratorA, storeA.id, JOAO, {
         expiresInDays: 3,
       }).expect(201);
       expect((Date.parse(ok.body.link.expiresAt) - Date.now()) / 86_400_000).toBeLessThanOrEqual(3);
-      await createLink(collaboratorA, storeA.id, JOAO.externalId, { expiresInDays: 31 }).expect(
-        400,
-      );
+      await createLink(collaboratorA, storeA.id, JOAO, { expiresInDays: 31 }).expect(400);
 
       const options = await collaboratorA.get('/admin/patient-links/options').expect(200);
       expect(options.body).toEqual({
@@ -123,10 +118,79 @@ describe('Links personalizados (e2e)', () => {
       });
     });
 
-    it('valida o paciente no backend', async () => {
+    it('recusa patientExternalId enviado pelo cliente (só aceita a seleção opaca)', async () => {
       const { storeA, collaboratorA } = await setup();
-      const res = await createLink(collaboratorA, storeA.id, 'paciente-inexistente').expect(400);
-      expect(res.body.error.issues[0].path).toBe('patientExternalId');
+      await collaboratorA
+        .post('/admin/patient-links', { storeId: storeA.id, patientExternalId: JOAO.externalId })
+        .expect(400);
+      const ref = await selectPatient(collaboratorA, { storeId: storeA.id });
+      await collaboratorA
+        .post('/admin/patient-links', {
+          storeId: storeA.id,
+          selectionRef: ref,
+          patientExternalId: MARIA.externalId,
+        })
+        .expect(400);
+    });
+
+    it('seleção inexistente, de outra loja, de outro usuário ou já usada é recusada', async () => {
+      const { storeA, collaboratorA } = await setup();
+      const expectExpired = (res: { body: { error: { issues: { path: string }[] } } }) =>
+        expect(res.body.error.issues[0]!.path).toBe('selectionRef');
+
+      // Inexistente.
+      expectExpired(
+        await collaboratorA
+          .post('/admin/patient-links', { storeId: storeA.id, selectionRef: unknownSelectionRef() })
+          .expect(400),
+      );
+
+      // De outro contexto: busca feita para a Loja A2, usada na Loja A.
+      const storeA2 = await createStore(ctx.prisma, { storeName: 'Loja A2' });
+      const manager = await loginAs(ctx.app, () =>
+        createUser(ctx.prisma, crypto, { role: 'MANAGER', storeIds: [storeA.id, storeA2.id] }),
+      );
+      const refA2 = await selectPatient(manager, { storeId: storeA2.id });
+      expectExpired(
+        await manager
+          .post('/admin/patient-links', { storeId: storeA.id, selectionRef: refA2 })
+          .expect(400),
+      );
+
+      // De outro usuário (mesma loja).
+      const refManager = await selectPatient(manager, { storeId: storeA.id });
+      expectExpired(
+        await collaboratorA
+          .post('/admin/patient-links', { storeId: storeA.id, selectionRef: refManager })
+          .expect(400),
+      );
+
+      // Uso único.
+      const ref = await selectPatient(collaboratorA, { storeId: storeA.id });
+      await collaboratorA
+        .post('/admin/patient-links', { storeId: storeA.id, selectionRef: ref })
+        .expect(201);
+      expectExpired(
+        await collaboratorA
+          .post('/admin/patient-links', { storeId: storeA.id, selectionRef: ref })
+          .expect(400),
+      );
+    });
+
+    it('seleção de outra sessão do mesmo usuário é recusada', async () => {
+      const { storeA } = await setup();
+      const { user } = await createUser(ctx.prisma, crypto, {
+        role: 'STORE_COLLABORATOR',
+        storeIds: [storeA.id],
+      });
+      const first = new Client(ctx.app);
+      await first.login(user.email);
+      const second = new Client(ctx.app);
+      await second.login(user.email);
+      const ref = await selectPatient(first, { storeId: storeA.id });
+      await second
+        .post('/admin/patient-links', { storeId: storeA.id, selectionRef: ref })
+        .expect(400);
     });
 
     it('não gera link para loja inativa', async () => {
@@ -167,7 +231,7 @@ describe('Links personalizados (e2e)', () => {
         createUser(ctx.prisma, crypto, { role: 'ADMIN' }),
       );
       await createLink(adminClient, storeA.id).expect(201);
-      await createLink(adminClient, storeB.id, MARIA.externalId).expect(201);
+      await createLink(adminClient, storeB.id, MARIA).expect(201);
 
       const own = await collaboratorA.get('/admin/patient-links').expect(200);
       expect(own.body.total).toBe(1);
@@ -216,7 +280,7 @@ describe('Links personalizados (e2e)', () => {
     it('deriva "Expirado" na leitura e filtra por status', async () => {
       const { storeA, collaboratorA } = await setup();
       const active = await createLink(collaboratorA, storeA.id).expect(201);
-      const toExpire = await createLink(collaboratorA, storeA.id, MARIA.externalId).expect(201);
+      const toExpire = await createLink(collaboratorA, storeA.id, MARIA).expect(201);
       await ctx.prisma.patientUploadLink.update({
         where: { id: toExpire.body.link.id },
         data: {
@@ -237,7 +301,7 @@ describe('Links personalizados (e2e)', () => {
   });
 
   describe('validação do token (CA-014) e consumo', () => {
-    async function createdToken(client: Client, storeId: string, patient = JOAO.externalId) {
+    async function createdToken(client: Client, storeId: string, patient = JOAO) {
       const res = await createLink(client, storeId, patient).expect(201);
       return { token: tokenOf(res.body.url as string), id: res.body.link.id as string };
     }
@@ -283,7 +347,7 @@ describe('Links personalizados (e2e)', () => {
         where: { id: used.id },
         data: { status: 'USED', usedAt: new Date() },
       });
-      const inactiveStore = await createdToken(collaboratorA, storeA.id, MARIA.externalId);
+      const inactiveStore = await createdToken(collaboratorA, storeA.id, MARIA);
 
       const messages = new Set([
         await expectNeutral(access.resolve('A'.repeat(43))),
@@ -348,62 +412,123 @@ describe('Links personalizados (e2e)', () => {
   });
 
   describe('busca de pacientes', () => {
-    it('retorna somente dados mínimos mascarados e audita sem o termo', async () => {
-      const { collaboratorA } = await setup();
+    it('retorna dados mínimos mascarados com referência opaca, sem ID, e audita sem o termo', async () => {
+      const { storeA, collaboratorA } = await setup();
       const res = await collaboratorA
         .post('/patients/search', {
           type: 'cpf',
           query: JOAO.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'),
+          context: { storeId: storeA.id },
         })
         .expect(200);
       expect(res.body.results).toEqual([
         {
-          externalId: JOAO.externalId,
+          selectionRef: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/),
           displayName: 'João T.',
           cpfMasked: `***.***.***-${JOAO.cpf.slice(-2)}`,
           phoneMasked: '*****-0001',
           emailMasked: 'j***@e***.com',
         },
       ]);
-      expect(JSON.stringify(res.body)).not.toContain(JOAO.cpf);
-      expect(JSON.stringify(res.body)).not.toContain('Silva');
+      const body = JSON.stringify(res.body);
+      for (const forbidden of [JOAO.cpf, 'Silva', JOAO.externalId]) {
+        expect(body).not.toContain(forbidden);
+      }
 
       const audit = await ctx.prisma.auditLog.findFirst({
         where: { action: AuditAction.PATIENT_SEARCH_PERFORMED },
         orderBy: { createdAt: 'desc' },
       });
-      expect(audit?.metadata).toEqual({ searchType: 'cpf', resultCount: 1 });
+      expect(audit).toMatchObject({ storeId: storeA.id });
+      expect(audit?.metadata).toMatchObject({
+        searchType: 'cpf',
+        resultCount: 1,
+        contextType: 'store',
+      });
+      expect(JSON.stringify(audit?.metadata)).not.toContain(JOAO.cpf);
     });
 
     it('telefone compartilhado retorna pacientes para desambiguação', async () => {
-      const { collaboratorA } = await setup();
+      const { storeA, collaboratorA } = await setup();
       const res = await collaboratorA
-        .post('/patients/search', { type: 'phone', query: '(21) 99000-0099' })
+        .post('/patients/search', {
+          type: 'phone',
+          query: '(21) 99000-0099',
+          context: { storeId: storeA.id },
+        })
         .expect(200);
       expect(res.body.results).toHaveLength(2);
+      expect(res.body.results[0].selectionRef).not.toBe(res.body.results[1].selectionRef);
     });
 
-    it('valida o termo por tipo', async () => {
-      const { collaboratorA } = await setup();
+    it('valida o termo por tipo e exige um contexto', async () => {
+      const { storeA, collaboratorA } = await setup();
+      const context = { storeId: storeA.id };
       await collaboratorA
-        .post('/patients/search', { type: 'cpf', query: '111.111.111-11' })
+        .post('/patients/search', { type: 'cpf', query: '111.111.111-11', context })
         .expect(400);
       await collaboratorA
-        .post('/patients/search', { type: 'email', query: 'invalido' })
+        .post('/patients/search', { type: 'email', query: 'invalido', context })
         .expect(400);
-      await collaboratorA.post('/patients/search', { type: 'nome', query: 'João' }).expect(400);
+      await collaboratorA
+        .post('/patients/search', { type: 'nome', query: 'João', context })
+        .expect(400);
+      await collaboratorA
+        .post('/patients/search', { type: 'email', query: 'x@example.com' })
+        .expect(400);
+    });
+
+    it('contexto de loja fora do escopo ou inativa é recusado antes de consultar a API', async () => {
+      const { storeB, collaboratorA } = await setup();
+      const searches = () =>
+        ctx.prisma.auditLog.count({ where: { action: AuditAction.PATIENT_SEARCH_PERFORMED } });
+      const before = await searches();
+      await collaboratorA
+        .post('/patients/search', {
+          type: 'email',
+          query: 'x@example.com',
+          context: { storeId: storeB.id },
+        })
+        .expect(403);
+      const admin = await loginAs(ctx.app, () => createUser(ctx.prisma, crypto, { role: 'ADMIN' }));
+      const inactive = await createStore(ctx.prisma, { active: false });
+      await admin
+        .post('/patients/search', {
+          type: 'email',
+          query: 'x@example.com',
+          context: { storeId: inactive.id },
+        })
+        .expect(409);
+      expect(await searches()).toBe(before);
+    });
+
+    it('contexto de receita: fora do escopo → 404; já identificada → 409', async () => {
+      const { storeA, storeB, collaboratorA } = await setup();
+      const other = await createSubmission(ctx.prisma, crypto, { storeId: storeB.id });
+      const search = (prescriptionId: string) =>
+        collaboratorA.post('/patients/search', {
+          type: 'email',
+          query: 'x@example.com',
+          context: { prescriptionId },
+        });
+      await search(other.id).expect(404);
+      const linked = await createSubmission(ctx.prisma, crypto, {
+        storeId: storeA.id,
+        patient: { externalId: JOAO.externalId, label: 'João T. · CPF ***.***.***-00' },
+      });
+      await search(linked.id).expect(409);
+      const open = await createSubmission(ctx.prisma, crypto, { storeId: storeA.id });
+      const res = await search(open.id).expect(200);
+      expect(res.body.results).toEqual([]);
     });
 
     it('aplica rate limit por usuário', async () => {
-      const { collaboratorA } = await setup();
+      const { storeA, collaboratorA } = await setup();
+      const body = { type: 'email', query: 'x@example.com', context: { storeId: storeA.id } };
       for (let i = 0; i < 30; i += 1) {
-        await collaboratorA
-          .post('/patients/search', { type: 'email', query: 'x@example.com' })
-          .expect(200);
+        await collaboratorA.post('/patients/search', body).expect(200);
       }
-      await collaboratorA
-        .post('/patients/search', { type: 'email', query: 'x@example.com' })
-        .expect(429);
+      await collaboratorA.post('/patients/search', body).expect(429);
     });
   });
 });

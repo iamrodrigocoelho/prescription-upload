@@ -2,45 +2,22 @@
 
 import {
   type CreatePatientLinkResponse,
-  formatCpf,
   type PatientLinkOptions,
   type PatientSearchResult,
-  type PatientSearchType,
 } from '@receita/shared';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Search } from 'lucide-react';
 import Link from 'next/link';
-import { type FormEvent, useState } from 'react';
+import { useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, PageHeader } from '@/components/ui/card';
 import { CopyButton } from '@/components/ui/copy-button';
-import { SelectField, TextField } from '@/components/ui/field';
-import { api, ApiError, errorMessage } from '@/lib/api';
-import { cx } from '@/lib/cx';
+import { SelectField } from '@/components/ui/field';
+import { api, errorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import { storeLabel, useStoreOptions } from '@/lib/stores';
-
-const SEARCH_TYPES: {
-  value: PatientSearchType;
-  label: string;
-  placeholder: string;
-  inputMode: 'numeric' | 'tel' | 'email';
-}[] = [
-  { value: 'cpf', label: 'CPF', placeholder: '000.000.000-00', inputMode: 'numeric' },
-  { value: 'phone', label: 'Telefone', placeholder: '(21) 90000-0000', inputMode: 'tel' },
-  { value: 'email', label: 'E-mail', placeholder: 'paciente@exemplo.com', inputMode: 'email' },
-];
-
-function searchErrorMessage(error: unknown): string {
-  if (error instanceof ApiError && error.code === 'VALIDATION_FAILED')
-    return error.issues[0]?.message ?? error.message;
-  if (error instanceof ApiError && error.code === 'SERVICE_UNAVAILABLE') {
-    return 'A consulta de pacientes está temporariamente indisponível. Tente novamente em instantes.';
-  }
-  return errorMessage(error);
-}
+import { PatientSearch } from './patients/patient-search';
 
 /**
  * Geração de link personalizado (DESIGN.md §8.6 / §13.4): loja → paciente →
@@ -52,8 +29,7 @@ export function LinkGenerator() {
   const { options: stores } = useStoreOptions(me);
   const activeStores = stores.filter((store) => store.active);
   const [storeId, setStoreId] = useState('');
-  const [searchType, setSearchType] = useState<PatientSearchType>('cpf');
-  const [term, setTerm] = useState('');
+  const [searchKey, setSearchKey] = useState(0);
   const [selected, setSelected] = useState<PatientSearchResult | null>(null);
   const [days, setDays] = useState<number | null>(null);
 
@@ -65,39 +41,24 @@ export function LinkGenerator() {
     storeId || (activeStores.length === 1 ? (activeStores[0]?.id ?? '') : '');
   const effectiveDays = days ?? optionsQuery.data?.defaultExpiryDays ?? 7;
 
-  const search = useMutation({
-    mutationFn: () =>
-      api<{ results: PatientSearchResult[] }>('/patients/search', {
-        method: 'POST',
-        body: { type: searchType, query: term },
-      }),
-    onSuccess: () => setSelected(null),
-  });
   const generate = useMutation({
     mutationFn: () =>
       api<CreatePatientLinkResponse>('/admin/patient-links', {
         method: 'POST',
         body: {
           storeId: effectiveStoreId,
-          patientExternalId: selected?.externalId,
+          selectionRef: selected?.selectionRef,
           expiresInDays: effectiveDays,
         },
       }),
   });
 
-  function submitSearch(event: FormEvent) {
-    event.preventDefault();
-    if (term.trim()) search.mutate();
-  }
-
   function reset() {
     generate.reset();
-    search.reset();
     setSelected(null);
-    setTerm('');
+    // Remonta a busca: uma seleção já usada não vale para o próximo link.
+    setSearchKey((key) => key + 1);
   }
-
-  const current = SEARCH_TYPES.find((type) => type.value === searchType) ?? SEARCH_TYPES[0]!;
 
   if (generate.data) {
     const { link, url } = generate.data;
@@ -164,100 +125,13 @@ export function LinkGenerator() {
           ))}
         </SelectField>
 
-        <form
-          onSubmit={submitSearch}
-          className="flex flex-col gap-3"
-          aria-labelledby="buscar-paciente"
-        >
-          <h2 id="buscar-paciente" className="text-label font-medium">
-            Buscar paciente
-          </h2>
-          <div role="radiogroup" aria-label="Buscar por" className="flex flex-wrap gap-2">
-            {SEARCH_TYPES.map((type) => (
-              <button
-                key={type.value}
-                type="button"
-                role="radio"
-                aria-checked={searchType === type.value}
-                onClick={() => {
-                  setSearchType(type.value);
-                  setTerm('');
-                  search.reset();
-                }}
-                className={cx(
-                  'min-h-9 rounded-button border px-3 text-body-sm font-medium',
-                  searchType === type.value
-                    ? 'border-primary bg-primary text-on-primary'
-                    : 'border-line-strong bg-surface text-content hover:bg-hover',
-                )}
-              >
-                {type.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <div className="flex-1">
-              <TextField
-                label={current.label}
-                inputMode={current.inputMode}
-                placeholder={current.placeholder}
-                autoComplete="off"
-                value={term}
-                onChange={(e) =>
-                  setTerm(searchType === 'cpf' ? formatCpf(e.target.value) : e.target.value)
-                }
-                error={search.error ? searchErrorMessage(search.error) : undefined}
-              />
-            </div>
-            <Button
-              type="submit"
-              variant="secondary"
-              loading={search.isPending}
-              disabled={!term.trim()}
-            >
-              <Search className="size-4" aria-hidden />
-              Buscar
-            </Button>
-          </div>
-        </form>
-
-        {search.data ? (
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-2 text-label font-medium">Resultado</legend>
-            {search.data.results.length === 0 ? (
-              <p role="status" className="text-body-sm text-content-muted">
-                Nenhum paciente encontrado. Confira os dados ou tente outro tipo de busca.
-              </p>
-            ) : (
-              search.data.results.map((patient) => {
-                const isSelected = selected?.externalId === patient.externalId;
-                return (
-                  <label
-                    key={patient.externalId}
-                    className={cx(
-                      'flex cursor-pointer items-center gap-3 rounded-card border p-3 text-body-sm',
-                      isSelected ? 'border-primary bg-selected' : 'border-line hover:bg-hover',
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      name="paciente"
-                      checked={isSelected}
-                      onChange={() => setSelected(patient)}
-                      className="size-4 accent-primary"
-                    />
-                    <span className="flex flex-wrap gap-x-4 gap-y-1">
-                      <span className="font-semibold">{patient.displayName}</span>
-                      <span>CPF {patient.cpfMasked}</span>
-                      {patient.phoneMasked ? <span>Tel. {patient.phoneMasked}</span> : null}
-                      {patient.emailMasked ? <span>{patient.emailMasked}</span> : null}
-                    </span>
-                  </label>
-                );
-              })
-            )}
-          </fieldset>
-        ) : null}
+        <PatientSearch
+          key={searchKey}
+          context={effectiveStoreId ? { storeId: effectiveStoreId } : null}
+          selectedRef={selected?.selectionRef ?? null}
+          onSelect={setSelected}
+          disabledHint="Selecione a loja para buscar o paciente."
+        />
 
         <SelectField
           label="Validade"

@@ -76,11 +76,6 @@ export class MockPatientProvider extends PatientProvider {
   searchByEmail(email: string): Promise<PatientSummary[]> {
     return Promise.resolve(summaries((p) => p.email === email));
   }
-
-  findByExternalId(externalId: string): Promise<PatientSummary | null> {
-    const found = MOCK_PATIENTS.find((p) => p.externalId === externalId);
-    return Promise.resolve(found ? toPatientSummary(found) : null);
-  }
 }
 
 function summaries(match: (patient: RawPatient) => boolean): PatientSummary[] {
