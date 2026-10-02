@@ -32,6 +32,7 @@ describe('permissões por perfil', () => {
       expect(hasPermission(role, Permission.PRESCRIPTIONS_READ)).toBe(true);
       expect(hasPermission(role, Permission.PRESCRIPTIONS_UPDATE_STATUS)).toBe(true);
       expect(hasPermission(role, Permission.PRESCRIPTIONS_REVEAL_CPF)).toBe(true);
+      expect(hasPermission(role, Permission.PRESCRIPTIONS_LINK_PATIENT)).toBe(true);
     }
     expect(hasPermission(Role.STORE_COLLABORATOR, Permission.PRESCRIPTIONS_REOPEN)).toBe(false);
     expect(hasPermission(Role.MANAGER, Permission.PRESCRIPTIONS_REOPEN)).toBe(true);

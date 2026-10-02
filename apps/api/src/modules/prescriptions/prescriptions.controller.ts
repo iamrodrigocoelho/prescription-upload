@@ -14,6 +14,9 @@ import {
   type CpfRevealResponse,
   type FileUrlQuery,
   fileUrlQuerySchema,
+  type LinkPatientInput,
+  type LinkPatientResponse,
+  linkPatientSchema,
   type ListPrescriptionsQuery,
   type SignedFileUrl,
   listPrescriptionsQuerySchema,
@@ -32,6 +35,7 @@ import type { AuthContext } from '../../common/auth/auth.types.js';
 import { UuidParamPipe } from '../../common/pipes/uuid-param.pipe.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { PrescriptionFilesService } from './prescription-files.service.js';
+import { PrescriptionPatientLinkService } from './prescription-patient-link.service.js';
 import { PrescriptionsService } from './prescriptions.service.js';
 
 @Controller('prescriptions')
@@ -40,6 +44,7 @@ export class PrescriptionsController {
   constructor(
     private readonly prescriptions: PrescriptionsService,
     private readonly files: PrescriptionFilesService,
+    private readonly patientLinks: PrescriptionPatientLinkService,
   ) {}
 
   @Get()
@@ -111,5 +116,17 @@ export class PrescriptionsController {
     @Param('id', UuidParamPipe) id: string,
   ): Promise<CpfRevealResponse> {
     return this.files.revealCpf(auth, id);
+  }
+
+  /** Vínculo manual (PRD §8.6, CA-008): recebe só a referência opaca da busca. */
+  @Post(':id/patient-link')
+  @RequirePermissions(Permission.PRESCRIPTIONS_LINK_PATIENT)
+  @HttpCode(HttpStatus.OK)
+  linkPatient(
+    @CurrentAuth() auth: AuthContext,
+    @Param('id', UuidParamPipe) id: string,
+    @Body(new ZodValidationPipe(linkPatientSchema)) body: LinkPatientInput,
+  ): Promise<LinkPatientResponse> {
+    return this.patientLinks.link(auth, id, body.selectionRef);
   }
 }

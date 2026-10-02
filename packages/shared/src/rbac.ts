@@ -17,6 +17,7 @@ export const Permission = {
   PRESCRIPTIONS_UPDATE_STATUS: 'prescriptions:update_status',
   /** Isolada para poder ser restringida no futuro sem mudar código (D-056). */
   PRESCRIPTIONS_REVEAL_CPF: 'prescriptions:reveal_cpf',
+  PRESCRIPTIONS_LINK_PATIENT: 'prescriptions:link_patient',
   PRESCRIPTIONS_REOPEN: 'prescriptions:reopen',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -29,6 +30,7 @@ const OPERATIONAL: readonly Permission[] = [
   Permission.PRESCRIPTIONS_READ,
   Permission.PRESCRIPTIONS_UPDATE_STATUS,
   Permission.PRESCRIPTIONS_REVEAL_CPF,
+  Permission.PRESCRIPTIONS_LINK_PATIENT,
 ];
 
 export const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {

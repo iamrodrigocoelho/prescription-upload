@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { selectionRefSchema } from './patients.js';
 import {
   IdentificationStatus,
   type MalwareScanStatus,
@@ -176,3 +177,13 @@ export type RealtimeEvent =
       identificationStatus: IdentificationStatus;
     }
   | { type: 'counters.updated'; storeId: string };
+
+/** Vínculo manual (PRD §8.6): apenas a referência opaca da busca (D-069). */
+export const linkPatientSchema = z.object({ selectionRef: selectionRefSchema }).strict();
+export type LinkPatientInput = z.infer<typeof linkPatientSchema>;
+
+export interface LinkPatientResponse {
+  identificationStatus: IdentificationStatus;
+  /** Rótulo mascarado do paciente vinculado. */
+  patientLabel: string;
+}
