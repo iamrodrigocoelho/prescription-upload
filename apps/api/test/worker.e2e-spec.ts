@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { Queue, QueueEvents, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 import sharp from 'sharp';
+import { AuditAction } from '@receita/shared';
 import { ENV } from '../src/config/config.module.js';
 import type { Env } from '../src/config/env.js';
 import { CryptoService } from '../src/infra/crypto/crypto.service.js';
@@ -17,7 +18,8 @@ import {
   type ProcessSubmissionJob,
   submissionJobId,
 } from '../src/modules/attachments/attachments.queue.js';
-import { NoopMalwareScanner } from '../src/modules/malware/malware-scanner.js';
+import { MalwareScanner, TestCleanMalwareScanner } from '../src/modules/malware/malware-scanner.js';
+import { AuditService } from '../src/modules/audit/audit.service.js';
 import { OutboxDispatcher } from '../src/modules/outbox/outbox-dispatcher.service.js';
 import {
   RealtimePublisher,
@@ -53,8 +55,10 @@ describe('Worker: processamento de anexos e outbox (integração)', () => {
     processor = new AttachmentProcessorService(
       ctx.prisma,
       storage,
-      new NoopMalwareScanner(),
+      new TestCleanMalwareScanner(),
       ctx.app.get(MetricsService),
+      ctx.app.get(AuditService),
+      env,
     );
   });
 
@@ -82,7 +86,7 @@ describe('Worker: processamento de anexos e outbox (integração)', () => {
     return { store, submission, key };
   }
 
-  it('HEIC gera derivado JPEG e miniatura; original preservado; NOT_SCANNED', async () => {
+  it('HEIC gera derivado JPEG e miniatura após CLEAN', async () => {
     const { submission, key } = await heicSubmission();
     await processor.processSubmission(submission.id);
 
@@ -90,7 +94,7 @@ describe('Worker: processamento de anexos e outbox (integração)', () => {
       where: { submissionId: submission.id },
     });
     expect(file).toMatchObject({
-      malwareScanStatus: 'NOT_SCANNED',
+      malwareScanStatus: 'CLEAN',
       processingStatus: 'DONE',
       previewMimeType: 'image/jpeg',
       previewStorageKey: `derivatives/${file.id}/preview.jpg`,
@@ -108,7 +112,7 @@ describe('Worker: processamento de anexos e outbox (integração)', () => {
     );
   });
 
-  it('PDF: sem derivados, NOT_SCANNED', async () => {
+  it('PDF: sem derivados, CLEAN', async () => {
     const store = await createStore(ctx.prisma);
     const key = generateStorageKey('test');
     await storage.putObject({ key, body: PDF(), contentType: 'application/pdf' });
@@ -122,10 +126,113 @@ describe('Worker: processamento de anexos e outbox (integração)', () => {
     });
     expect(file).toMatchObject({
       processingStatus: 'DONE',
-      malwareScanStatus: 'NOT_SCANNED',
+      malwareScanStatus: 'CLEAN',
       previewStorageKey: null,
       thumbnailStorageKey: null,
     });
+  });
+
+  it('EICAR é isolado, original removido, bloqueado e auditado', async () => {
+    const eicar = Buffer.from(
+      'X5O!P%@AP[4\\PZX54(P^)7CC)7}' + '$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*',
+    );
+    class DetectingScanner extends MalwareScanner {
+      scan(): Promise<'INFECTED'> {
+        return Promise.resolve('INFECTED');
+      }
+      ping(): Promise<void> {
+        return Promise.resolve();
+      }
+    }
+    const store = await createStore(ctx.prisma);
+    const key = generateStorageKey('test');
+    await storage.putObject({ key, body: eicar, contentType: 'application/octet-stream' });
+    const submission = await createSubmission(ctx.prisma, crypto, {
+      storeId: store.id,
+      files: [{ storageKey: key, mimeType: 'application/pdf', malwareScanStatus: 'PENDING' }],
+    });
+    const infectedProcessor = new AttachmentProcessorService(
+      ctx.prisma,
+      storage,
+      new DetectingScanner(),
+      ctx.app.get(MetricsService),
+      ctx.app.get(AuditService),
+      env,
+    );
+    await infectedProcessor.processSubmission(submission.id);
+    const file = await ctx.prisma.prescriptionFile.findFirstOrThrow({
+      where: { submissionId: submission.id },
+    });
+    expect(file).toMatchObject({
+      malwareScanStatus: 'INFECTED',
+      processingStatus: 'DONE',
+      quarantineStorageKey: `quarantine/${file.id}/original`,
+    });
+    expect(await storage.headObject(key)).toBeNull();
+    expect(await storage.getObject(file.quarantineStorageKey!)).toEqual(eicar);
+    expect(
+      await ctx.prisma.auditLog.count({
+        where: { action: AuditAction.PRESCRIPTION_FILE_QUARANTINED, entityId: file.id },
+      }),
+    ).toBe(1);
+    const collaborator = await loginAs(ctx.app, () =>
+      createUser(ctx.prisma, crypto, { role: 'STORE_COLLABORATOR', storeIds: [store.id] }),
+    );
+    await collaborator
+      .get(`/prescriptions/${submission.id}/files/${file.id}/download-url`)
+      .expect(403);
+  });
+
+  it('scanner indisponível alerta, registra FAILED e mantém o arquivo bloqueado', async () => {
+    class UnavailableScanner extends MalwareScanner {
+      scan(): Promise<'CLEAN'> {
+        return Promise.reject(new Error('simulado'));
+      }
+      ping(): Promise<void> {
+        return Promise.reject(new Error('simulado'));
+      }
+    }
+    const store = await createStore(ctx.prisma);
+    const key = generateStorageKey('test');
+    await storage.putObject({ key, body: PDF(), contentType: 'application/pdf' });
+    const submission = await createSubmission(ctx.prisma, crypto, {
+      storeId: store.id,
+      files: [{ storageKey: key, mimeType: 'application/pdf', malwareScanStatus: 'PENDING' }],
+    });
+    const unavailableProcessor = new AttachmentProcessorService(
+      ctx.prisma,
+      storage,
+      new UnavailableScanner(),
+      ctx.app.get(MetricsService),
+      ctx.app.get(AuditService),
+      env,
+    );
+    await expect(unavailableProcessor.processSubmission(submission.id)).rejects.toThrow(
+      /Scanner de anexos indisponível/,
+    );
+    const file = await ctx.prisma.prescriptionFile.findFirstOrThrow({
+      where: { submissionId: submission.id },
+    });
+    expect(file.malwareScanStatus).toBe('FAILED');
+    expect(await ctx.app.get(MetricsService).registry.metrics()).toContain(
+      'security_events_total{type="malware_scanner_unavailable"}',
+    );
+    const collaborator = await loginAs(ctx.app, () =>
+      createUser(ctx.prisma, crypto, { role: 'STORE_COLLABORATOR', storeIds: [store.id] }),
+    );
+    await collaborator.get(`/prescriptions/${submission.id}/files/${file.id}/view-url`).expect(403);
+  });
+
+  it('mede atraso de varredura nos limiares de aviso e crítico', async () => {
+    const { submission } = await heicSubmission();
+    await ctx.prisma.prescriptionFile.updateMany({
+      where: { submissionId: submission.id },
+      data: { createdAt: new Date(Date.now() - 600_000) },
+    });
+    await processor.reportScanDelays();
+    const metrics = await ctx.app.get(MetricsService).registry.metrics();
+    expect(metrics).toContain('malware_scan_delayed_files{threshold="warning"} 1');
+    expect(metrics).toContain('malware_scan_delayed_files{threshold="critical"} 1');
   });
 
   it('retry: falha na 1ª tentativa e conclui na 2ª via BullMQ', async () => {
@@ -170,7 +277,7 @@ describe('Worker: processamento de anexos e outbox (integração)', () => {
     }
   });
 
-  it('tentativas esgotadas: marca FAILED e o anexo continua com download no Admin', async () => {
+  it('tentativas esgotadas: marca FAILED e mantém anexo bloqueado', async () => {
     const { store, submission } = await heicSubmission();
     await processor.markFailed(submission.id);
     const file = await ctx.prisma.prescriptionFile.findFirstOrThrow({
@@ -185,10 +292,10 @@ describe('Worker: processamento de anexos e outbox (integração)', () => {
       createUser(ctx.prisma, crypto, { role: 'STORE_COLLABORATOR', storeIds: [store.id] }),
     );
     const detail = await collaborator.get(`/prescriptions/${submission.id}`).expect(200);
-    expect(detail.body.files[0]).toMatchObject({ accessible: true, previewAvailable: false });
+    expect(detail.body.files[0]).toMatchObject({ accessible: false, previewAvailable: false });
     await collaborator
       .get(`/prescriptions/${submission.id}/files/${file.id}/download-url`)
-      .expect(200);
+      .expect(403);
   });
 
   it('dispatcher: enfileira o job, publica eventos de tempo real e marca o outbox como processado', async () => {

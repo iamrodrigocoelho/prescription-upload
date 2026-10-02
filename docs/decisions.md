@@ -484,3 +484,9 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 - **Contexto:** `GET /prescriptions/{id}` alterava `first_viewed_at` e gravava auditoria; navegação externa com cookie `SameSite=Lax` podia produzir o efeito sem ação na interface.
 - **Decisão:** manter o GET como leitura pura e usar `POST /prescriptions/{id}/open` com CSRF para a abertura real. A interface chama o POST; o evento e a auditoria seguem atômicos. PRD §26.3 atualizado.
 - **Descartado:** exigir CSRF em GET com efeito colateral, mantendo semântica HTTP incorreta.
+
+## D-082 — Adapter ClamAV e isolamento de infectados
+
+- **Data:** 2026-10-02
+- **Decisão de implementação da Etapa 3:** usar `MalwareScanner` como port agnóstico e ClamAV em container separado como adapter open source padrão. O modo `test-clean` só é aceito em `NODE_ENV=test`; produção exige ClamAV. Um resultado `INFECTED` é bloqueado antes da cópia para o prefixo privado `quarantine/`; original e derivados são removidos com retry e auditoria. Readiness testa o scanner; atraso gera métrica/alerta aos 120/300 segundos, configuráveis. O re-scan é relatório por padrão e requer `--apply` para alterar dados. A escolha definitiva de antivírus/cloud continua com Segurança da Informação (PRD §42.12).
+- **Limite:** sem runtime ClamAV nesta estação; teste real EICAR preparado para CI/staging e obrigatório antes do go-live.

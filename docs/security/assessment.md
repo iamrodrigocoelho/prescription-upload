@@ -150,3 +150,8 @@ TLS e configuração real da borda; criptografia em repouso e backups da cloud; 
 - **G-23/SR-12 (Média): corrigido.** `GET /prescriptions/{id}` é leitura pura; `POST /prescriptions/{id}/open` registra a abertura sob CSRF. PRD §26.3 atualizado. Evidência: `prescriptions-detail.e2e-spec.ts`.
 - **G-08: parcial.** CSP de produção sem `unsafe-inline`/`unsafe-eval`, HSTS com preload na API e no web, headers de storage no Caddy de exemplo, PDF em iframe sandbox. Falta validar a configuração real da borda e o domínio definitivo.
 - **Verificação:** lint, typecheck, unitários, 222 testes e2e da API e 35 testes Playwright passaram. O checklist ASVS requisito por requisito e as demais revisões da Etapa 1 continuam abertos.
+
+## 9. Progresso — Etapa 3
+
+- **G-01/SR-01 (Alta): mitigado em código.** Apenas `CLEAN` gera URL; scanner ClamAV via TCP `INSTREAM`, health check e container próprio, falha fechada, quarentena retomável, exclusão de original/derivados, AuditLog e alerta técnico. `NOT_SCANNED` legado é tratado por re-scan. Evidência: `clamav-scanner.ts`, `attachment-processor.service.ts`, `prescription-files.service.ts`, `test/worker.e2e-spec.ts` e `docs/security/antivirus.md`.
+- **Evidência local:** lint, typecheck, unitários, 226 testes e2e da API e 35 testes Playwright passaram; um teste e2e EICAR real ficou ignorado por configuração. Ele está pronto em `test/clamav-real.e2e-spec.ts`, mas depende de Docker/clamd, ausentes nesta estação. Segurança/Operações devem executá-lo em CI/staging antes de homologação e registrar o resultado. Não declarar G-01 plenamente encerrado até isso ocorrer.

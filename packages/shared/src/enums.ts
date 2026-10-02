@@ -58,7 +58,7 @@ export type PatientLinkType = (typeof PatientLinkType)[keyof typeof PatientLinkT
 
 export const MalwareScanStatus = {
   PENDING: 'PENDING',
-  /** Processado sem antivírus configurado (scanner no-op) — D-057. */
+  /** Legado da Fase 3; bloqueado até re-scan (D-080). */
   NOT_SCANNED: 'NOT_SCANNED',
   CLEAN: 'CLEAN',
   INFECTED: 'INFECTED',
@@ -108,6 +108,7 @@ export const AuditAction = {
   PRESCRIPTION_REOPENED: 'prescription.reopened',
   PRESCRIPTION_FILE_VIEWED: 'prescription.file_viewed',
   PRESCRIPTION_FILE_DOWNLOADED: 'prescription.file_downloaded',
+  PRESCRIPTION_FILE_QUARANTINED: 'prescription.file_quarantined',
   PRESCRIPTION_CPF_REVEALED: 'prescription.cpf_revealed',
   /** Vínculo automático (CPF) ou manual; o tipo vai em `metadata.linkType`. */
   PRESCRIPTION_PATIENT_LINKED: 'prescription.patient_linked',

@@ -213,10 +213,12 @@ export function DetailPage({ id }: { id: string }) {
                     <p className="text-caption text-content-muted">
                       {formatFileSize(file.sizeBytes)}
                     </p>
-                    {file.malwareScanStatus === 'PENDING' ? (
+                    {file.malwareScanStatus === 'PENDING' ||
+                    file.malwareScanStatus === 'NOT_SCANNED' ||
+                    file.malwareScanStatus === 'FAILED' ? (
                       <StatusBadge tone="neutral" label="Verificação pendente" />
                     ) : null}
-                    {!file.accessible ? (
+                    {file.malwareScanStatus === 'INFECTED' ? (
                       <StatusBadge tone="error" label="Bloqueado pela verificação" />
                     ) : null}
                   </div>

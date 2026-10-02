@@ -18,6 +18,7 @@ Aplicação web de envio e gestão de receitas médicas da Drogaria Venancio.
 | Rate limiting         | Valkey (compatível com Redis)                               |
 | Arquivos              | SeaweedFS (S3-compatible, bucket privado)                   |
 | E-mail                | SMTP (Mailpit em desenvolvimento)                           |
+| Antivírus             | ClamAV (container dedicado; falha fechada)                  |
 
 Tudo é open source e pode ser hospedado em infraestrutura própria.
 
@@ -39,7 +40,7 @@ cp .env.example .env
 #   PATIENT_SEARCH_AUDIT_PEPPER               →  openssl rand -base64 32
 #   SEED_ADMIN_PASSWORD, SEED_DEMO_PASSWORD   →  senhas de desenvolvimento (≥ 12 caracteres)
 
-# 2. Infraestrutura (PostgreSQL, Valkey, SeaweedFS, Mailpit)
+# 2. Infraestrutura (PostgreSQL, Valkey, SeaweedFS, Mailpit, ClamAV)
 docker compose up -d
 
 # 3. Dependências
@@ -64,25 +65,28 @@ http://localhost:8025.
 
 ## Scripts
 
-| Comando                  | Descrição                                                            |
-| ------------------------ | -------------------------------------------------------------------- |
-| `pnpm dev`               | Sobe web, API e worker em modo watch                                 |
-| `pnpm build`             | Build de todos os pacotes                                            |
-| `pnpm lint`              | ESLint em todo o monorepo                                            |
-| `pnpm typecheck`         | Verificação de tipos (strict)                                        |
-| `pnpm test`              | Testes unitários                                                     |
-| `pnpm test:e2e`          | Testes de integração/e2e da API (requer Postgres, Valkey, SeaweedFS) |
-| `pnpm test:e2e:web`      | E2E das telas públicas (Playwright + axe; requer infra e internet)   |
-| `pnpm db:migrate`        | Cria/aplica migrations em desenvolvimento                            |
-| `pnpm db:migrate:deploy` | Aplica migrations pendentes (produção/CI)                            |
-| `pnpm db:seed`           | Popula dados de desenvolvimento                                      |
-| `pnpm db:reset`          | Recria o banco de desenvolvimento do zero                            |
-| `pnpm format`            | Prettier                                                             |
+| Comando                             | Descrição                                                            |
+| ----------------------------------- | -------------------------------------------------------------------- |
+| `pnpm dev`                          | Sobe web, API e worker em modo watch                                 |
+| `pnpm build`                        | Build de todos os pacotes                                            |
+| `pnpm lint`                         | ESLint em todo o monorepo                                            |
+| `pnpm typecheck`                    | Verificação de tipos (strict)                                        |
+| `pnpm test`                         | Testes unitários                                                     |
+| `pnpm test:e2e`                     | Testes de integração/e2e da API (requer Postgres, Valkey, SeaweedFS) |
+| `pnpm test:e2e:web`                 | E2E das telas públicas (Playwright + axe; requer infra e internet)   |
+| `pnpm db:migrate`                   | Cria/aplica migrations em desenvolvimento                            |
+| `pnpm db:migrate:deploy`            | Aplica migrations pendentes (produção/CI)                            |
+| `pnpm db:seed`                      | Popula dados de desenvolvimento                                      |
+| `pnpm db:reset`                     | Recria o banco de desenvolvimento do zero                            |
+| `pnpm format`                       | Prettier                                                             |
+| `pnpm --filter @receita/api rescan` | Relatório de re-scan; `--apply` executa após revisão                 |
 
 ## Worker (processamento assíncrono)
 
 O worker entrega os eventos do outbox (fila de anexos e tempo real) e processa os anexos
-(antivírus no-op → `NOT_SCANNED`, JPEG de visualização para HEIC/HEIF e miniaturas).
+(ClamAV → `CLEAN` ou quarentena, JPEG de visualização para HEIC/HEIF e miniaturas).
+Enquanto a varredura estiver pendente ou falhar, o anexo não pode ser visualizado nem baixado.
+Veja [operação do antivírus](./docs/security/antivirus.md) para configuração, health e re-scan.
 
 ```bash
 pnpm dev                                  # já inclui o worker (dev:worker)

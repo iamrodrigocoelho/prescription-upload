@@ -59,6 +59,13 @@ export class MetricsService {
     registers: [this.registry],
   });
 
+  readonly malwareScanDelayed = new Gauge({
+    name: 'malware_scan_delayed_files',
+    help: 'Anexos sem resultado de antivírus após o limiar',
+    labelNames: ['threshold'] as const,
+    registers: [this.registry],
+  });
+
   readonly patientProviderDuration = new Histogram({
     name: 'patient_provider_request_duration_seconds',
     help: 'Latência das chamadas à API de pacientes por operação e desfecho',

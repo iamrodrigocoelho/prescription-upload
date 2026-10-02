@@ -30,6 +30,7 @@ import { RealtimeModule } from './modules/realtime/realtime.module.js';
 import { PublicModule } from './modules/public/public.module.js';
 import { StoresModule } from './modules/stores/stores.module.js';
 import { UsersModule } from './modules/users/users.module.js';
+import { MalwareModule } from './modules/malware/malware.module.js';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { UsersModule } from './modules/users/users.module.js';
     OutboxModule,
     RealtimeControlModule,
     AuditModule,
+    MalwareModule,
     AuthModule,
     HealthModule,
     SettingsModule,

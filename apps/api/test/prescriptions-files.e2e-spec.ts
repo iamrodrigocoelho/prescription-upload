@@ -127,7 +127,7 @@ describe('Anexos e CPF (e2e)', () => {
     ).toBe(0);
   });
 
-  it('arquivo "infected" não gera URL; NOT_SCANNED e PENDING são liberados', async () => {
+  it('somente CLEAN gera URL; INFECTED, NOT_SCANNED e PENDING são bloqueados', async () => {
     const { a, collaborator } = await setup();
     const s = await createSubmission(ctx.prisma, crypto, {
       storeId: a.id,
@@ -135,19 +135,22 @@ describe('Anexos e CPF (e2e)', () => {
         { malwareScanStatus: 'INFECTED' },
         { malwareScanStatus: 'NOT_SCANNED' },
         { malwareScanStatus: 'PENDING' },
+        { malwareScanStatus: 'CLEAN' },
       ],
     });
-    const [infected, notScanned, pending] = s.files.sort((x, y) => x.position - y.position);
+    const [infected, notScanned, pending, clean] = s.files.sort((x, y) => x.position - y.position);
     await collaborator.get(`/prescriptions/${s.id}/files/${infected!.id}/view-url`).expect(403);
     await collaborator.get(`/prescriptions/${s.id}/files/${infected!.id}/download-url`).expect(403);
     await collaborator
       .get(`/prescriptions/${s.id}/files/${notScanned!.id}/download-url`)
-      .expect(200);
-    await collaborator.get(`/prescriptions/${s.id}/files/${pending!.id}/view-url`).expect(200);
+      .expect(403);
+    await collaborator.get(`/prescriptions/${s.id}/files/${pending!.id}/view-url`).expect(403);
+    await collaborator.get(`/prescriptions/${s.id}/files/${clean!.id}/view-url`).expect(200);
     const detail = await collaborator.get(`/prescriptions/${s.id}`).expect(200);
     expect(detail.body.files.map((f: { accessible: boolean }) => f.accessible)).toEqual([
       false,
-      true,
+      false,
+      false,
       true,
     ]);
   });

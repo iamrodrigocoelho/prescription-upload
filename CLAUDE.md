@@ -73,7 +73,7 @@ Não avance de etapa com testes quebrados.
 - Qualquer revogação/desativação/mudança de escopo deve chamar `RealtimeControl`
   (`invalidateSession`/`invalidateUser`) para fechar streams SSE.
 - Receita fora do escopo = 404 (`PrescriptionsService.findScoped`). Arquivo só via
-  `PrescriptionFilesService.signedUrl` (checa escopo + vínculo arquivo↔receita + INFECTED).
+  `PrescriptionFilesService.signedUrl` (checa escopo + vínculo arquivo↔receita + status `CLEAN`).
 - Matriz de status em `packages/shared/src/status-matrix.ts` (frontend e backend).
 - Ordem dos anexos: `prescription_files.position` (não ordenar por `created_at`).
 - Web: `lib/realtime.tsx` (`RealtimeProvider`/`useRealtime`), `lib/prescriptions.ts`
@@ -106,6 +106,16 @@ identification_status = NOT_IDENTIFIED`) + `PatientLinkHistory` + auditoria + ou
   `components/admin/prescriptions/link-patient-dialog.tsx`, `components/admin/dashboard/*`
   (gráficos SVG próprios), `lib/dashboard.ts`. E2E: `admin-patients.spec.ts`,
   `admin-dashboard.spec.ts`.
+
+## Fase 5 — segurança de anexos
+
+- `MalwareScanner` é o port para antivírus; ClamAV é o adapter padrão. `test-clean` só roda em
+  `NODE_ENV=test`. A API só emite URL para `CLEAN`; falha de scanner, pendência e legado
+  `NOT_SCANNED` ficam bloqueados. O worker isola infectados em `quarantine/`, exclui o
+  original/derivados e audita o evento.
+- Comandos: `pnpm --filter @receita/api rescan` (relatório), `... rescan --apply` (re-scan),
+  `... rescan --retry-quarantine --apply` (retoma isolamento). O teste EICAR real requer
+  `CLAMAV_REAL_TEST=1` com daemon e assinaturas; veja `docs/security/antivirus.md`.
 
 ## Convenções de código
 

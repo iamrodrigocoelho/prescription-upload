@@ -98,6 +98,11 @@ export class WorkerRunner implements OnApplicationBootstrap, OnApplicationShutdo
             this.logger.error({ err: error }, 'Falha na reconciliação de anexos'),
           );
       }
+      this.processor
+        .reportScanDelays()
+        .catch((error: unknown) =>
+          this.logger.error({ err: error }, 'Falha ao verificar atraso de antivírus'),
+        );
     };
     sweep();
     this.sweepTimer = setInterval(sweep, 60_000);

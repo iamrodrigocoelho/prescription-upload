@@ -55,10 +55,10 @@ export class PrescriptionFilesService {
       where: { id: fileId, submissionId },
     });
     if (!file) throw new AppError(ApiErrorCode.NOT_FOUND);
-    if (file.malwareScanStatus === 'INFECTED') {
+    if (file.malwareScanStatus !== 'CLEAN') {
       throw new AppError(
         ApiErrorCode.FORBIDDEN,
-        'Este arquivo foi bloqueado pela verificação de segurança.',
+        'Este arquivo ainda não está disponível após a verificação de segurança.',
       );
     }
 

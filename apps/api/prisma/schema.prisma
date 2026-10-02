@@ -62,7 +62,7 @@ enum PatientLinkType {
 
 enum MalwareScanStatus {
   PENDING
-  /// Processado sem antivírus configurado (scanner no-op).
+  /// Legado anterior à adoção do scanner; bloqueado até re-scan.
   NOT_SCANNED
   CLEAN
   INFECTED
@@ -330,6 +330,8 @@ model PrescriptionFile {
   previewStorageKey   String?              @unique @map("preview_storage_key") @db.VarChar(512)
   previewMimeType     String?              @map("preview_mime_type") @db.VarChar(100)
   thumbnailStorageKey String?              @unique @map("thumbnail_storage_key") @db.VarChar(512)
+  /// Cópia isolada de arquivo infectado; o original é removido após a cópia.
+  quarantineStorageKey String?             @unique @map("quarantine_storage_key") @db.VarChar(512)
   processingStatus    FileProcessingStatus @default(PENDING) @map("processing_status")
   processingErrorCode String?              @map("processing_error_code") @db.VarChar(60)
   createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)

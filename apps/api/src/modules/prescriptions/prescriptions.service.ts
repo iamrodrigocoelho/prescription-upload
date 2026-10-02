@@ -286,7 +286,7 @@ export class PrescriptionsService {
       mimeType: file.mimeType,
       sizeBytes: file.sizeBytes,
       malwareScanStatus: file.malwareScanStatus,
-      accessible: file.malwareScanStatus !== 'INFECTED',
+      accessible: file.malwareScanStatus === 'CLEAN',
       previewAvailable:
         file.previewStorageKey !== null || ['image/jpeg', 'image/png'].includes(file.mimeType),
       thumbnailAvailable: file.thumbnailStorageKey !== null,

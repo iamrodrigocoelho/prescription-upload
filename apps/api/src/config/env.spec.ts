@@ -22,6 +22,12 @@ describe('parseEnv', () => {
     ).toThrow(/CPF_ENCRYPTION_KEY/);
   });
 
+  it('não permite scanner sintético fora dos testes', () => {
+    expect(() =>
+      parseEnv({ ...process.env, NODE_ENV: 'development', MALWARE_SCANNER_MODE: 'test-clean' }),
+    ).toThrow(/MALWARE_SCANNER_MODE/);
+  });
+
   it('proíbe provider mock e cookie inseguro em produção', () => {
     expect(() =>
       parseEnv({ ...process.env, NODE_ENV: 'production', PATIENT_PROVIDER: 'mock' }),

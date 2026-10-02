@@ -58,6 +58,23 @@ services:
       - '127.0.0.1:1025:1025'
       - '127.0.0.1:8025:8025'
 
+  # Imagem oficial multiarch; FreshClam atualiza assinaturas no próprio container.
+  # O protocolo clamd não tem autenticação: exponha somente em loopback/rede privada.
+  clamav:
+    image: clamav/clamav-debian:stable
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3310:3310'
+    volumes:
+      - clamav-data:/var/lib/clamav
+    healthcheck:
+      test: ['CMD-SHELL', 'clamdscan --ping 1 >/dev/null 2>&1']
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+
 volumes:
   postgres-data:
   seaweedfs-data:
+  clamav-data:

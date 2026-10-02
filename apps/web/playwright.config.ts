@@ -28,6 +28,7 @@ export const e2eEnv: Record<string, string> = {
   PUBLIC_LOOKUP_RATE_LIMIT_POINTS: '10000',
   LOGIN_RATE_LIMIT_POINTS: '10000',
   STORAGE_BUCKET: 'receitas-e2e',
+  MALWARE_SCANNER_MODE: 'test-clean',
 };
 
 export default defineConfig({

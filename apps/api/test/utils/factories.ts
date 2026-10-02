@@ -119,7 +119,7 @@ export async function createSubmission(
           mimeType: file.mimeType ?? 'image/jpeg',
           sizeBytes: 1234,
           checksum: 'a'.repeat(64),
-          malwareScanStatus: file.malwareScanStatus ?? 'NOT_SCANNED',
+          malwareScanStatus: file.malwareScanStatus ?? 'CLEAN',
         })),
       },
       statusHistory: {

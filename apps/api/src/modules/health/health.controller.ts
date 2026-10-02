@@ -6,6 +6,7 @@ import { AppError } from '../../common/errors.js';
 import { REDIS } from '../../infra/redis/redis.module.js';
 import { StorageProvider } from '../../infra/storage/storage.provider.js';
 import { PrismaService } from '../../infra/prisma/prisma.service.js';
+import { MalwareScanner } from '../malware/malware-scanner.js';
 
 type CheckResult = 'ok' | 'fail';
 
@@ -18,6 +19,7 @@ export class HealthController {
     private readonly prisma: PrismaService,
     @Inject(REDIS) private readonly redis: Redis,
     private readonly storage: StorageProvider,
+    private readonly scanner: MalwareScanner,
   ) {}
 
   /** Liveness: o processo está de pé. Não toca dependências externas. */
@@ -40,6 +42,7 @@ export class HealthController {
         await this.redis.ping();
       }),
       storage: await this.check('storage', () => this.storage.ping()),
+      antivirus: await this.check('antivirus', () => this.scanner.ping()),
     };
     if (Object.values(checks).some((value) => value === 'fail')) {
       throw new AppError(ApiErrorCode.SERVICE_UNAVAILABLE);

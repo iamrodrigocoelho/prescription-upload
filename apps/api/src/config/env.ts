@@ -127,6 +127,12 @@ export const envSchema = z
     // Worker (fila de anexos e outbox)
     OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().min(100).max(10_000).default(500),
     ATTACHMENTS_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(2),
+    MALWARE_SCANNER_MODE: z.enum(['clamav', 'test-clean']).default('clamav'),
+    CLAMAV_HOST: z.string().min(1).default('127.0.0.1'),
+    CLAMAV_PORT: z.coerce.number().int().min(1).max(65535).default(3310),
+    CLAMAV_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(30_000),
+    MALWARE_SCAN_WARN_SECONDS: z.coerce.number().int().min(30).max(3600).default(120),
+    MALWARE_SCAN_CRITICAL_SECONDS: z.coerce.number().int().min(60).max(7200).default(300),
 
     // Pacientes (PRD §27). Desligada, a busca informa indisponibilidade.
     PATIENT_INTEGRATION_ENABLED: bool.default(false),
@@ -168,6 +174,20 @@ export const envSchema = z
     CPF_REVEAL_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(30),
   })
   .superRefine((env, ctx) => {
+    if (env.MALWARE_SCAN_CRITICAL_SECONDS <= env.MALWARE_SCAN_WARN_SECONDS) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['MALWARE_SCAN_CRITICAL_SECONDS'],
+        message: 'deve exceder MALWARE_SCAN_WARN_SECONDS',
+      });
+    }
+    if (env.MALWARE_SCANNER_MODE === 'test-clean' && env.NODE_ENV !== 'test') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['MALWARE_SCANNER_MODE'],
+        message: 'scanner de teste permitido somente em NODE_ENV=test',
+      });
+    }
     if (env.PATIENT_AUTO_IDENTIFICATION_ENABLED && !env.PATIENT_INTEGRATION_ENABLED) {
       ctx.addIssue({
         code: 'custom',
@@ -185,6 +205,13 @@ export const envSchema = z
       });
     }
     if (env.NODE_ENV === 'production') {
+      if (env.MALWARE_SCANNER_MODE !== 'clamav') {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['MALWARE_SCANNER_MODE'],
+          message: 'scanner de teste proibido em produção',
+        });
+      }
       if (env.PATIENT_PROVIDER === 'mock') {
         ctx.addIssue({
           code: 'custom',

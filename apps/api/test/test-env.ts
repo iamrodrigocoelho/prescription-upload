@@ -19,6 +19,7 @@ export function applyTestEnv(): void {
       'postgresql://receita:receita_dev@localhost:5432/receita_test',
     REDIS_URL: process.env.TEST_REDIS_URL ?? 'redis://localhost:6379/1',
     REDIS_KEY_PREFIX: 'rv-test:',
+    MALWARE_SCANNER_MODE: 'test-clean',
     CPF_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
     CPF_LOOKUP_PEPPER: 'test-pepper-test-pepper-test-pepper-0001',
     PATIENT_SEARCH_AUDIT_PEPPER: 'test-search-pepper-test-search-pepper-01',

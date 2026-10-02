@@ -1,6 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { createTestApp } from './utils/app.js';
+import { MalwareScanner } from '../src/modules/malware/malware-scanner.js';
+import { createTestApp, createTestContext } from './utils/app.js';
 
 describe('Health e headers de segurança (e2e)', () => {
   let app: INestApplication;
@@ -65,7 +66,18 @@ describe('Readiness (e2e)', () => {
     const res = await request(app.getHttpServer()).get('/health/ready').expect(200);
     expect(res.body).toEqual({
       status: 'ok',
-      checks: { database: 'ok', redis: 'ok', storage: 'ok' },
+      checks: { database: 'ok', redis: 'ok', storage: 'ok', antivirus: 'ok' },
     });
+  });
+
+  it('readiness falha quando o antivírus está indisponível', async () => {
+    const ctx = await createTestContext([
+      { provide: MalwareScanner, useValue: { ping: () => Promise.reject(new Error('simulado')) } },
+    ]);
+    try {
+      await request(ctx.app.getHttpServer()).get('/health/ready').expect(503);
+    } finally {
+      await ctx.app.close();
+    }
   });
 });
