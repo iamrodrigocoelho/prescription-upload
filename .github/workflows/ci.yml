@@ -21,7 +21,7 @@ jobs:
       STORAGE_ACCESS_KEY: receita
       STORAGE_SECRET_KEY: receita_ci_storage_key
       CLAMAV_REAL_TEST: '1'
-      SEAWEEDFS_VOLUME_MAX: '8'
+      SEAWEEDFS_VOLUME_MAX: '32'
       SEAWEEDFS_VOLUME_SIZE_MB: '128'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
