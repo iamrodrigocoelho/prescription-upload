@@ -42,6 +42,10 @@
   --color-hover: var(--rv-color-state-hover);
   --color-selected: var(--rv-color-state-selected);
 
+  --color-chart-1: var(--rv-color-chart-series-1);
+  --color-chart-2: var(--rv-color-chart-series-2);
+  --color-chart-grid: var(--rv-color-chart-grid);
+
   --font-sans: var(--rv-font-family-sans);
   --font-mono: var(--rv-font-family-mono);
 

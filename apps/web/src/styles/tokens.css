@@ -47,6 +47,12 @@
   --rv-color-state-hover: #f0f2f4;
   --rv-color-state-selected: #e6e9ed;
 
+  /* color.chart — TODO(marca): padrão final de gráficos (DESIGN.md §16, item 8).
+     Séries sempre acompanhadas de rótulo/legenda em texto (nunca só cor). */
+  --rv-color-chart-series-1: #1f2933;
+  --rv-color-chart-series-2: #166534;
+  --rv-color-chart-grid: #d4d8dd;
+
   /* type — TODO(marca): família tipográfica oficial */
   --rv-font-family-sans:
     system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;

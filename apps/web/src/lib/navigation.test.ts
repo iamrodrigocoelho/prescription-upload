@@ -5,6 +5,7 @@ describe('navItemsFor', () => {
   it('Colaborador e Gestor não veem Usuários', () => {
     for (const role of ['STORE_COLLABORATOR', 'MANAGER'] as const) {
       expect(navItemsFor(role).map((i) => i.label)).toEqual([
+        'Dashboard',
         'Receitas',
         'Links personalizados',
         'Lojas',
@@ -14,6 +15,7 @@ describe('navItemsFor', () => {
 
   it('Admin vê todos os itens', () => {
     expect(navItemsFor('ADMIN').map((i) => i.label)).toEqual([
+      'Dashboard',
       'Receitas',
       'Links personalizados',
       'Lojas',

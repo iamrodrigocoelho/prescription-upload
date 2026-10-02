@@ -156,11 +156,13 @@ test.describe('Operação da loja', () => {
     await dialog.getByRole('button', { name: 'Baixar' }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/^receita-[0-9a-f]{8}-2\.pdf$/);
+    // Espera o download terminar: recarregar antes aborta a navegação do download.
+    expect(await download.failure()).toBeNull();
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
 
     // Histórico registra visualização e download.
-    await page.reload();
+    await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.getByText(/Visualizou o arquivo 1/).first()).toBeVisible();
     await expect(page.getByText(/Baixou o arquivo 2/).first()).toBeVisible();
   });
