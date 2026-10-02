@@ -19,88 +19,88 @@ Esforço: **P** ≤ ½ dia · **M** 1–2 dias · **G** ≥ 3 dias.
 
 ## 2. Lacunas contra PRD §21, §22, §35 e §43
 
-| ID | Lacuna | Referência | Sev. | Esforço | Etapa |
-|---|---|---|---|---|---|
-| G-01 | Antivírus é no-op; `NOT_SCANNED`/`PENDING` recebem URL assinada; produção pode subir com o no-op | PRD §9.4, §35, §42.12 · SR-01 | **Alta** | M | 3 |
-| G-02 | Sem job de retenção/descarte; `retention_until` só é gravado; sem legal hold. Objetos órfãos, sessões e tokens expirados também não têm rotina de limpeza identificada | PRD §22.1, §22.3, RF-036 · SR-04 | **Alta** | G | 4 |
-| G-03 | Não há pipeline de CI versionado no repositório (lint/testes, SCA, SAST, segredos, imagens, SBOM, DAST); eventual CI externa não foi apresentada | PRD §35 | **Alta** | M | 2 |
-| G-04 | Chaves CPF/TOTP sem identificador de versão (o prefixo `v1:` é do formato) e sem rotação; pepper do HMAC sem procedimento; segredos só por env | PRD §35 ("rotação de credenciais"), RNF-007 | **Alta** | M | 5 |
-| G-05 | Política de backup e teste de restauração inexistentes; comportamento de exclusão no storage (versões/backups) não documentado | PRD §22.1 ("backups protegidos") | **Alta** | M | 4, 8 |
-| G-06 | Criptografia em repouso do banco, storage e backups não configurada nem documentada (SeaweedFS local sem cifragem) | RNF-007, §22.1 | **Alta** (infra) | P (doc) | 5, 9 |
-| G-07 | Sem teste automatizado de cobertura de guards por rota; sem matriz de autorização verificada | PRD §35 | Média | M | 1 |
-| G-08 | CSP com `style-src-attr 'unsafe-inline'`; HSTS sem `preload`; storage sem headers próprios | PRD §35 · SR-05, SR-17 | Média | M | 1 |
-| G-09 | Sem checklist ASVS L2 com evidências | PRD §35 | Média | M | 1 |
-| G-10 | 2FA só por usuário (Admin por padrão); sem política por perfil configurável | PRD §15.3, §22.1, §42.7 | Média | M | 6 |
-| G-11 | Observabilidade sem tracing distribuído, sem error tracking com scrubbing, sem alertas, sem dashboards como código; worker sem health check | PRD §34, RNF-009 | Média | G | 7 |
-| G-12 | Sem testes de redação de dados sensíveis cobrindo logs/traces/erros/analytics de ponta a ponta | Regras inegociáveis · SR-09 | Média | M | 7 |
-| G-13 | Sem testes de carga, metas ou orçamento de performance pública | RNF-004, RNF-010, RNF-011 | Média | G | 8 |
-| G-14 | Pontos únicos de falha não analisados (Redis, storage, worker); o encerramento do worker e SSE existe no código, mas não há teste de drenagem/failover | RNF-010 | Média | M | 8 |
-| G-15 | Imagens: worker sem imagem/entrypoint próprio documentado, filesystem read-only não configurado; compose com `:latest` (seaweedfs, mailpit); migrations sem estratégia expand/contract documentada | PRD §36 | Média | M | 9 |
-| G-16 | Sem definição de ambientes nem gerador de dados sintéticos para staging | PRD §36 | Média | M | 9 |
-| G-17 | E2E só em Chromium; sem auditoria manual WCAG; sem plano de testes em dispositivos | RNF-003, RNF-013, DESIGN §12 | Média | M | 10 |
-| G-18 | Tokens oficiais de marca inexistentes: contraste final não verificável | DESIGN §16 | Média (bloqueante p/ revisão final) | — (Marca) | 10 |
-| G-19 | Sem modelo de ameaças, escopo de pentest, inventário de dados pessoais, runbooks e go-live checklist | PRD §22.1, §35, §40, §43 | Média | G | 11 |
-| G-20 | Sem retenção definida para `audit_logs` e logs técnicos (volume cresce com buscas e aberturas) | PRD §22.3 (extensão) | Baixa | P (proposta) | 4 |
-| G-21 | Evento de adulteração do link personalizado sem `entityId`/`storeId` (registrado antes de resolver o link) | PRD §23 (campos mínimos) | Baixa | P | 1 |
-| G-22 | Pentest não realizado; aprovação interna de Segurança/LGPD pendente | PRD §35, §43 | **Bloqueante** (externo) | — | 11 (escopo) |
-| G-23 | `GET /prescriptions/:id` marca primeira visualização e gera evento, enquanto CSRF libera métodos GET | PRD §35 · SR-12 | Média | P | 1 |
-| G-24 | Token do link personalizado aparece na URL por requisito do PRD; histórico/sincronização do navegador continuam sendo vias residuais apesar de uso único e troca por cookie | PRD §6.5, §40 · SR-19 | Média (residual) | P (análise) | 11 / Segurança |
+| ID   | Lacuna                                                                                                                                                                                             | Referência                                  | Sev.                                | Esforço      | Etapa          |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | ----------------------------------- | ------------ | -------------- |
+| G-01 | Antivírus é no-op; `NOT_SCANNED`/`PENDING` recebem URL assinada; produção pode subir com o no-op                                                                                                   | PRD §9.4, §35, §42.12 · SR-01               | **Alta**                            | M            | 3              |
+| G-02 | Sem job de retenção/descarte; `retention_until` só é gravado; sem legal hold. Objetos órfãos, sessões e tokens expirados também não têm rotina de limpeza identificada                             | PRD §22.1, §22.3, RF-036 · SR-04            | **Alta**                            | G            | 4              |
+| G-03 | Não há pipeline de CI versionado no repositório (lint/testes, SCA, SAST, segredos, imagens, SBOM, DAST); eventual CI externa não foi apresentada                                                   | PRD §35                                     | **Alta**                            | M            | 2              |
+| G-04 | Chaves CPF/TOTP sem identificador de versão (o prefixo `v1:` é do formato) e sem rotação; pepper do HMAC sem procedimento; segredos só por env                                                     | PRD §35 ("rotação de credenciais"), RNF-007 | **Alta**                            | M            | 5              |
+| G-05 | Política de backup e teste de restauração inexistentes; comportamento de exclusão no storage (versões/backups) não documentado                                                                     | PRD §22.1 ("backups protegidos")            | **Alta**                            | M            | 4, 8           |
+| G-06 | Criptografia em repouso do banco, storage e backups não configurada nem documentada (SeaweedFS local sem cifragem)                                                                                 | RNF-007, §22.1                              | **Alta** (infra)                    | P (doc)      | 5, 9           |
+| G-07 | Sem teste automatizado de cobertura de guards por rota; sem matriz de autorização verificada                                                                                                       | PRD §35                                     | Média                               | M            | 1              |
+| G-08 | CSP com `style-src-attr 'unsafe-inline'`; HSTS sem `preload`; storage sem headers próprios                                                                                                         | PRD §35 · SR-05, SR-17                      | Média                               | M            | 1              |
+| G-09 | Sem checklist ASVS L2 com evidências                                                                                                                                                               | PRD §35                                     | Média                               | M            | 1              |
+| G-10 | 2FA só por usuário (Admin por padrão); sem política por perfil configurável                                                                                                                        | PRD §15.3, §22.1, §42.7                     | Média                               | M            | 6              |
+| G-11 | Observabilidade sem tracing distribuído, sem error tracking com scrubbing, sem alertas, sem dashboards como código; worker sem health check                                                        | PRD §34, RNF-009                            | Média                               | G            | 7              |
+| G-12 | Sem testes de redação de dados sensíveis cobrindo logs/traces/erros/analytics de ponta a ponta                                                                                                     | Regras inegociáveis · SR-09                 | Média                               | M            | 7              |
+| G-13 | Sem testes de carga, metas ou orçamento de performance pública                                                                                                                                     | RNF-004, RNF-010, RNF-011                   | Média                               | G            | 8              |
+| G-14 | Pontos únicos de falha não analisados (Redis, storage, worker); o encerramento do worker e SSE existe no código, mas não há teste de drenagem/failover                                             | RNF-010                                     | Média                               | M            | 8              |
+| G-15 | Imagens: worker sem imagem/entrypoint próprio documentado, filesystem read-only não configurado; compose com `:latest` (seaweedfs, mailpit); migrations sem estratégia expand/contract documentada | PRD §36                                     | Média                               | M            | 9              |
+| G-16 | Sem definição de ambientes nem gerador de dados sintéticos para staging                                                                                                                            | PRD §36                                     | Média                               | M            | 9              |
+| G-17 | E2E só em Chromium; sem auditoria manual WCAG; sem plano de testes em dispositivos                                                                                                                 | RNF-003, RNF-013, DESIGN §12                | Média                               | M            | 10             |
+| G-18 | Tokens oficiais de marca inexistentes: contraste final não verificável                                                                                                                             | DESIGN §16                                  | Média (bloqueante p/ revisão final) | — (Marca)    | 10             |
+| G-19 | Sem modelo de ameaças, escopo de pentest, inventário de dados pessoais, runbooks e go-live checklist                                                                                               | PRD §22.1, §35, §40, §43                    | Média                               | G            | 11             |
+| G-20 | Sem retenção definida para `audit_logs` e logs técnicos (volume cresce com buscas e aberturas)                                                                                                     | PRD §22.3 (extensão)                        | Baixa                               | P (proposta) | 4              |
+| G-21 | Evento de adulteração do link personalizado sem `entityId`/`storeId` (registrado antes de resolver o link)                                                                                         | PRD §23 (campos mínimos)                    | Baixa                               | P            | 1              |
+| G-22 | Pentest não realizado; aprovação interna de Segurança/LGPD pendente                                                                                                                                | PRD §35, §43                                | **Bloqueante** (externo)            | —            | 11 (escopo)    |
+| G-23 | `GET /prescriptions/:id` marca primeira visualização e gera evento, enquanto CSRF libera métodos GET                                                                                               | PRD §35 · SR-12                             | Média                               | P            | 1              |
+| G-24 | Token do link personalizado aparece na URL por requisito do PRD; histórico/sincronização do navegador continuam sendo vias residuais apesar de uso único e troca por cookie                        | PRD §6.5, §40 · SR-19                       | Média (residual)                    | P (análise)  | 11 / Segurança |
 
 ### Estado preliminar da Definition of Done (PRD §43)
 
 Classificação baseada em leitura de código, sem repetir nesta etapa a suíte da Fase 4; "implementado" não equivale a homologado. O relatório de DoD da Fase 4 não estava disponível para confronto.
 
-| Critério de §43 | Estado preliminar / lacuna | Evidência principal |
-|---|---|---|
-| Importar lojas e gerar link próprio | Implementado; validar base oficial | `stores.controller.ts`, `public-context.controller.ts` |
-| Gerar, copiar, expirar/revogar link personalizado | Implementado; revisar risco residual de token em URL (G-24) | `patient-links.controller.ts`, `patient-links.service.ts` |
-| Envio por link sem CPF e vínculo correto | Implementado; retestar ponta a ponta | `submissions.service.ts`, `patient-link-access.service.ts` |
-| Envio sem login pelo celular | Implementado; dispositivo real pendente | `submissions.controller.ts`, `file-dropzone.tsx` |
-| CPF opcional | Implementado | `submissions.service.ts` |
-| Upload até 10 × 5 MB e formatos permitidos | Implementado; endurecer PDF/antimalware (G-01) | `file-validator.ts`, `upload-receiver.ts` |
-| Câmera em dispositivo compatível | Atributo `capture` presente; teste iOS/Android pendente | `file-dropzone.tsx` |
-| reCAPTCHA obrigatório no backend | Implementado; credenciais e domínio de produção pendentes | `recaptcha-v2.verifier.ts`, `submissions.service.ts` |
-| Confirmação de sucesso | Implementada; retestar e2e | `public-submission.spec.ts` |
-| Receita em tempo real na loja correta | Implementado; carga e borda SSE pendentes | `realtime-hub.service.ts`, `realtime.controller.ts` |
-| Colaborador visualizar/baixar arquivos | Implementado, mas inseguro até bloquear não escaneados (G-01) | `prescription-files.service.ts` |
-| Colaborador alterar status | Implementado; retestar autorização | `prescriptions.controller.ts` |
-| Vínculo manual de paciente | Implementado; retestar escopo e concorrência | `prescription-patient-link.service.ts` |
-| Integração por CPF pronta para API real | Contrato/adapter preparado; endpoint real ainda indefinido | `http-patient.provider.ts`, `patient-identification.service.ts` |
-| Dashboard por escopo | Implementado; retestar e2e | `dashboard.controller.ts`, `dashboard.service.ts` |
-| RBAC entre lojas | Implementado nas consultas examinadas; teste completo de rotas/escopos pendente (G-07) | `permissions.guard.ts`, `store-scope.service.ts` |
-| 2FA TOTP habilitável | Implementado; força bruta deve ser corrigida (SR-02) | `totp.service.ts`, `totp.controller.ts` |
-| Auditoria de eventos críticos | Implementada; cobertura integral a verificar (G-21) | `audit.service.ts`, `audit.controller.ts` |
-| Arquivos em storage privado | Adapter S3/URL temporária; ACL e borda reais não verificadas | `s3-storage.provider.ts` |
-| Observabilidade mínima | Logs/métricas/health presentes; tracing/alertas faltam (G-11/G-12) | `metrics.service.ts`, `health.controller.ts` |
-| Aderência visual ao DESIGN | Implementação presente; revisão final de contraste/tokens pendente (G-18) | `tokens.css`, `DESIGN.md` §16 |
-| Assets oficiais de `/img/logo/` | Cópia no build presente; aprovação final da Marca pendente | `brand.tsx`, `sync-brand.mjs` |
-| Segurança e LGPD aprovadas para produção | **Pendente:** pentest, Jurídico/DPO, controles altos e operações (G-01–G-06/G-22) | PRD §43; sem evidência de aprovação |
+| Critério de §43                                   | Estado preliminar / lacuna                                                             | Evidência principal                                             |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Importar lojas e gerar link próprio               | Implementado; validar base oficial                                                     | `stores.controller.ts`, `public-context.controller.ts`          |
+| Gerar, copiar, expirar/revogar link personalizado | Implementado; revisar risco residual de token em URL (G-24)                            | `patient-links.controller.ts`, `patient-links.service.ts`       |
+| Envio por link sem CPF e vínculo correto          | Implementado; retestar ponta a ponta                                                   | `submissions.service.ts`, `patient-link-access.service.ts`      |
+| Envio sem login pelo celular                      | Implementado; dispositivo real pendente                                                | `submissions.controller.ts`, `file-dropzone.tsx`                |
+| CPF opcional                                      | Implementado                                                                           | `submissions.service.ts`                                        |
+| Upload até 10 × 5 MB e formatos permitidos        | Implementado; endurecer PDF/antimalware (G-01)                                         | `file-validator.ts`, `upload-receiver.ts`                       |
+| Câmera em dispositivo compatível                  | Atributo `capture` presente; teste iOS/Android pendente                                | `file-dropzone.tsx`                                             |
+| reCAPTCHA obrigatório no backend                  | Implementado; credenciais e domínio de produção pendentes                              | `recaptcha-v2.verifier.ts`, `submissions.service.ts`            |
+| Confirmação de sucesso                            | Implementada; retestar e2e                                                             | `public-submission.spec.ts`                                     |
+| Receita em tempo real na loja correta             | Implementado; carga e borda SSE pendentes                                              | `realtime-hub.service.ts`, `realtime.controller.ts`             |
+| Colaborador visualizar/baixar arquivos            | Implementado, mas inseguro até bloquear não escaneados (G-01)                          | `prescription-files.service.ts`                                 |
+| Colaborador alterar status                        | Implementado; retestar autorização                                                     | `prescriptions.controller.ts`                                   |
+| Vínculo manual de paciente                        | Implementado; retestar escopo e concorrência                                           | `prescription-patient-link.service.ts`                          |
+| Integração por CPF pronta para API real           | Contrato/adapter preparado; endpoint real ainda indefinido                             | `http-patient.provider.ts`, `patient-identification.service.ts` |
+| Dashboard por escopo                              | Implementado; retestar e2e                                                             | `dashboard.controller.ts`, `dashboard.service.ts`               |
+| RBAC entre lojas                                  | Implementado nas consultas examinadas; teste completo de rotas/escopos pendente (G-07) | `permissions.guard.ts`, `store-scope.service.ts`                |
+| 2FA TOTP habilitável                              | Implementado; força bruta deve ser corrigida (SR-02)                                   | `totp.service.ts`, `totp.controller.ts`                         |
+| Auditoria de eventos críticos                     | Implementada; cobertura integral a verificar (G-21)                                    | `audit.service.ts`, `audit.controller.ts`                       |
+| Arquivos em storage privado                       | Adapter S3/URL temporária; ACL e borda reais não verificadas                           | `s3-storage.provider.ts`                                        |
+| Observabilidade mínima                            | Logs/métricas/health presentes; tracing/alertas faltam (G-11/G-12)                     | `metrics.service.ts`, `health.controller.ts`                    |
+| Aderência visual ao DESIGN                        | Implementação presente; revisão final de contraste/tokens pendente (G-18)              | `tokens.css`, `DESIGN.md` §16                                   |
+| Assets oficiais de `/img/logo/`                   | Cópia no build presente; aprovação final da Marca pendente                             | `brand.tsx`, `sync-brand.mjs`                                   |
+| Segurança e LGPD aprovadas para produção          | **Pendente:** pentest, Jurídico/DPO, controles altos e operações (G-01–G-06/G-22)      | PRD §43; sem evidência de aprovação                             |
 
 ## 3. Achados da revisão independente (SR)
 
 Achados do diagnóstico inicial e da revisão independente atual. Esta última confirmou SR-01/SR-04 e acrescentou ou reclassificou SR-12/SR-18/SR-19; os marcados "a confirmar" dependem de infraestrutura ou de comportamento de biblioteca. Os demais precisam ser reconfirmados na Etapa 1 antes de serem declarados resolvidos.
 
-| ID | Sev. | Título | Evidência | Etapa / destino |
-|---|---|---|---|---|
-| SR-01 | **Alta** | Antivírus no-op; arquivos não verificados servidos à equipe | `malware.module.ts:6`, `malware-scanner.ts:20-23`, `prescription-files.service.ts:58` | 3 (= G-01) |
-| SR-02 | **Alta** *(revisor: Média)* | Força bruta de TOTP: `failedLoginCount` zerado ao acertar a senha, antes do 2FA; limitador de MFA só por sessão | `auth.service.ts:91-100` (confirmado), `totp.service.ts:171-193`, `rate-limit.service.ts:54` | 1 |
-| SR-03 | Média | Regeneração de códigos de recuperação sem rate limit nem contagem de falhas | `totp.controller.ts:75-82`, `totp.service.ts:245-249` (confirmado) | 1 |
-| SR-04 | Média→**Alta** | Retenção/descarte inexistente | `submissions.service.ts:232` | 4 (= G-02) |
-| SR-05 | Baixa | Storage sem headers de segurança; iframe do PDF sem `sandbox` | `Caddyfile.example`, `file-viewer.tsx:242` | 1 |
-| SR-06 | Baixa (a confirmar) | Bomba de descompressão HEIC (dimensões não limitadas antes de alocar) | `derivatives.ts:25-31` | 3 |
-| SR-07 | Baixa | Ativar/reconfigurar 2FA sem reautenticação | `totp.controller.ts:31-50` | 1 |
-| SR-08 | Baixa | Desativar 2FA não revoga as outras sessões | `totp.service.ts:227-242` (confirmado) | 1 |
-| SR-09 | Baixa | Stack trace no log sem redação de CPF | `redact.ts:27` | 7 (com G-12) |
-| SR-10 | Baixa (a confirmar) | Dono da tabela pode desligar o trigger append-only (API e migrations com o mesmo role) | `20261001205025_init/migration.sql:399-418` | 9 (roles separados) |
-| SR-11 | Baixa (a confirmar) | IP de rate limit depende da topologia (`TRUST_PROXY=1`, XFF) | `app.setup.ts:24` | 9 (requisito de deploy) |
-| SR-12 | **Média** | GET do detalhe altera `firstViewedAt` e emite evento; navegação externa pode enviar cookie SameSite=Lax sem CSRF | `prescriptions.controller.ts:66-71`, `prescriptions.service.ts:95-124`, `csrf.guard.ts:9,27-29` | 1 (= G-23) |
-| SR-13 | Info | `/metrics` alcançável pela internet via `/api/*` (protegido por token) | `metrics.controller.ts:12-31` | 7/9 (bloquear na borda) |
-| SR-14 | Info | Códigos de recuperação com SHA-256 sem custo | `recovery-codes.ts:21-23` | 1 |
-| SR-15 | Info | Lockout permite DoS de contas conhecidas | `account-lockout.service.ts` | 7 (alerta) |
-| SR-16 | Info | Nome original do arquivo persistido sem necessidade aparente | `upload-receiver.ts:183` | Backlog (DPO) |
-| SR-17 | Info | `style-src-attr 'unsafe-inline'`; Admin pode ser criado sem 2FA; auditoria anônima do link limitada só por IP; limite de streams SSE por instância; override de permissões | diversos | 1, 6, backlog |
-| SR-18 | Média | Objeto de upload órfão é registrado após falha de exclusão, mas não existe consumidor para o registro | `storage-cleanup.service.ts:20-35`, `schema.prisma:416-426` | 4 (= G-02) |
-| SR-19 | Média (residual) | Token bearer do link personalizado faz parte da URL, passível de histórico/sincronização do navegador; mitigado por uso único, no-referrer/no-store e cookie | `patient-links.service.ts:117-150`, `apps/web/src/app/(public)/p/[token]/page.tsx:7-9` | 11 (= G-24), validação de Segurança |
+| ID    | Sev.                        | Título                                                                                                                                                                     | Evidência                                                                                       | Etapa / destino                     |
+| ----- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------- |
+| SR-01 | **Alta**                    | Antivírus no-op; arquivos não verificados servidos à equipe                                                                                                                | `malware.module.ts:6`, `malware-scanner.ts:20-23`, `prescription-files.service.ts:58`           | 3 (= G-01)                          |
+| SR-02 | **Alta** _(revisor: Média)_ | Força bruta de TOTP: `failedLoginCount` zerado ao acertar a senha, antes do 2FA; limitador de MFA só por sessão                                                            | `auth.service.ts:91-100` (confirmado), `totp.service.ts:171-193`, `rate-limit.service.ts:54`    | 1                                   |
+| SR-03 | Média                       | Regeneração de códigos de recuperação sem rate limit nem contagem de falhas                                                                                                | `totp.controller.ts:75-82`, `totp.service.ts:245-249` (confirmado)                              | 1                                   |
+| SR-04 | Média→**Alta**              | Retenção/descarte inexistente                                                                                                                                              | `submissions.service.ts:232`                                                                    | 4 (= G-02)                          |
+| SR-05 | Baixa                       | Storage sem headers de segurança; iframe do PDF sem `sandbox`                                                                                                              | `Caddyfile.example`, `file-viewer.tsx:242`                                                      | 1                                   |
+| SR-06 | Baixa (a confirmar)         | Bomba de descompressão HEIC (dimensões não limitadas antes de alocar)                                                                                                      | `derivatives.ts:25-31`                                                                          | 3                                   |
+| SR-07 | Baixa                       | Ativar/reconfigurar 2FA sem reautenticação                                                                                                                                 | `totp.controller.ts:31-50`                                                                      | 1                                   |
+| SR-08 | Baixa                       | Desativar 2FA não revoga as outras sessões                                                                                                                                 | `totp.service.ts:227-242` (confirmado)                                                          | 1                                   |
+| SR-09 | Baixa                       | Stack trace no log sem redação de CPF                                                                                                                                      | `redact.ts:27`                                                                                  | 7 (com G-12)                        |
+| SR-10 | Baixa (a confirmar)         | Dono da tabela pode desligar o trigger append-only (API e migrations com o mesmo role)                                                                                     | `20261001205025_init/migration.sql:399-418`                                                     | 9 (roles separados)                 |
+| SR-11 | Baixa (a confirmar)         | IP de rate limit depende da topologia (`TRUST_PROXY=1`, XFF)                                                                                                               | `app.setup.ts:24`                                                                               | 9 (requisito de deploy)             |
+| SR-12 | **Média**                   | GET do detalhe altera `firstViewedAt` e emite evento; navegação externa pode enviar cookie SameSite=Lax sem CSRF                                                           | `prescriptions.controller.ts:66-71`, `prescriptions.service.ts:95-124`, `csrf.guard.ts:9,27-29` | 1 (= G-23)                          |
+| SR-13 | Info                        | `/metrics` alcançável pela internet via `/api/*` (protegido por token)                                                                                                     | `metrics.controller.ts:12-31`                                                                   | 7/9 (bloquear na borda)             |
+| SR-14 | Info                        | Códigos de recuperação com SHA-256 sem custo                                                                                                                               | `recovery-codes.ts:21-23`                                                                       | 1                                   |
+| SR-15 | Info                        | Lockout permite DoS de contas conhecidas                                                                                                                                   | `account-lockout.service.ts`                                                                    | 7 (alerta)                          |
+| SR-16 | Info                        | Nome original do arquivo persistido sem necessidade aparente                                                                                                               | `upload-receiver.ts:183`                                                                        | Backlog (DPO)                       |
+| SR-17 | Info                        | `style-src-attr 'unsafe-inline'`; Admin pode ser criado sem 2FA; auditoria anônima do link limitada só por IP; limite de streams SSE por instância; override de permissões | diversos                                                                                        | 1, 6, backlog                       |
+| SR-18 | Média                       | Objeto de upload órfão é registrado após falha de exclusão, mas não existe consumidor para o registro                                                                      | `storage-cleanup.service.ts:20-35`, `schema.prisma:416-426`                                     | 4 (= G-02)                          |
+| SR-19 | Média (residual)            | Token bearer do link personalizado faz parte da URL, passível de histórico/sincronização do navegador; mitigado por uso único, no-referrer/no-store e cookie               | `patient-links.service.ts:117-150`, `apps/web/src/app/(public)/p/[token]/page.tsx:7-9`          | 11 (= G-24), validação de Segurança |
 
 **Reclassificação de SR-02:** o segundo fator existe justamente para o cenário "senha comprometida". O contador por conta é zerado após acertar a senha, antes de concluir o 2FA, e o limite por sessão pode ser reiniciado em outro login. Para contas Admin/Gestor com acesso a dados de saúde de várias lojas, isso enfraquece o segundo fator — tratado como bloqueante de produção.
 
@@ -116,14 +116,14 @@ TLS e configuração real da borda; criptografia em repouso e backups da cloud; 
 
 ## 6. Decisões em aberto (PRD §42) — quem decide
 
-| Tema | Responsável | Tratamento nesta fase |
-|---|---|---|
-| Cloud/hospedagem (§42.5) | Tecnologia + Negócio | Requisitos agnósticos (`deployment-requirements.md`); sem IaC de provedor |
-| Antivírus definitivo (§42.12) | Segurança da Informação | ClamAV como padrão open source; interface para serviço gerenciado |
-| Política de retenção e descarte (§42.8) | Jurídico/DPO | Job em dry-run; execução real bloqueada até aprovação registrada |
-| Obrigatoriedade de 2FA (§42.7) | Negócio + Segurança | Política por perfil configurável; padrão opcional; recomendação Admin + Gestor |
-| Domínio (§42.2) | Negócio | Configurável por env; HSTS preload só após domínio definitivo |
-| Base legal / aviso de privacidade (§22.2) | Jurídico/DPO | Material de apoio em `docs/privacy/` |
+| Tema                                      | Responsável             | Tratamento nesta fase                                                          |
+| ----------------------------------------- | ----------------------- | ------------------------------------------------------------------------------ |
+| Cloud/hospedagem (§42.5)                  | Tecnologia + Negócio    | Requisitos agnósticos (`deployment-requirements.md`); sem IaC de provedor      |
+| Antivírus definitivo (§42.12)             | Segurança da Informação | ClamAV como padrão open source; interface para serviço gerenciado              |
+| Política de retenção e descarte (§42.8)   | Jurídico/DPO            | Job em dry-run; execução real bloqueada até aprovação registrada               |
+| Obrigatoriedade de 2FA (§42.7)            | Negócio + Segurança     | Política por perfil configurável; padrão opcional; recomendação Admin + Gestor |
+| Domínio (§42.2)                           | Negócio                 | Configurável por env; HSTS preload só após domínio definitivo                  |
+| Base legal / aviso de privacidade (§22.2) | Jurídico/DPO            | Material de apoio em `docs/privacy/`                                           |
 
 ## 7. Plano proposto — aguarda aprovação antes de alterar código
 
@@ -154,12 +154,20 @@ TLS e configuração real da borda; criptografia em repouso e backups da cloud; 
 ## 9. Progresso — Etapa 3
 
 - **G-01/SR-01 (Alta): mitigado em código.** Apenas `CLEAN` gera URL; scanner ClamAV via TCP `INSTREAM`, health check e container próprio, falha fechada, quarentena retomável, exclusão de original/derivados, AuditLog e alerta técnico. `NOT_SCANNED` legado é tratado por re-scan. Evidência: `clamav-scanner.ts`, `attachment-processor.service.ts`, `prescription-files.service.ts`, `test/worker.e2e-spec.ts` e `docs/security/antivirus.md`.
-- **Evidência local:** lint, typecheck, unitários, 226 testes e2e da API e 35 testes Playwright passaram; um teste e2e EICAR real ficou ignorado por configuração. Ele está pronto em `test/clamav-real.e2e-spec.ts`, mas depende de Docker/clamd, ausentes nesta estação. Segurança/Operações devem executá-lo em CI/staging antes de homologação e registrar o resultado. Não declarar G-01 plenamente encerrado até isso ocorrer.
+- **Evidência local:** lint, typecheck, unitários e 35 testes Playwright passaram. Em 2026-10-02, ClamAV 1.5.4 foi instalado via Homebrew, assinaturas oficiais foram atualizadas e a suíte e2e da API passou com EICAR real (227/227), confirmando detecção, quarentena e remoção do original. `/health/ready` reportou banco, Redis, storage e antivírus `ok`; web respondeu HTTP 200. Falta evidência do mesmo fluxo no CI/staging antes de encerrar G-01 para homologação.
 
 ## 10. Achados adicionais da auditoria de dependências
 
-| Achado | Severidade | Estado | Evidência |
-|---|---|---|---|
-| `deepmerge-ts <8` via Prisma, [GHSA-ggr8-5vv4-36mx](https://github.com/advisories/GHSA-ggr8-5vv4-36mx) | Alta | Corrigido por override `8.0.2`; remover após correção upstream | `pnpm-workspace.yaml`, lockfile, `prisma validate`, `pnpm audit` |
-| `mysql2 <3.22` via Prisma, [GHSA-3f6p-5ww8-9rcr](https://github.com/advisories/GHSA-3f6p-5ww8-9rcr) | Alta | Corrigido por override `3.23.1` | mesmos gates |
-| `mysql2 <=3.23` via Prisma, [GHSA-rgwj-5xj2-c3m3](https://github.com/advisories/GHSA-rgwj-5xj2-c3m3) | Média | Corrigido pelo mesmo override | `pnpm audit --audit-level moderate`: nenhuma vulnerabilidade conhecida |
+| Achado                                                                                                 | Severidade | Estado                                                         | Evidência                                                              |
+| ------------------------------------------------------------------------------------------------------ | ---------- | -------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `deepmerge-ts <8` via Prisma, [GHSA-ggr8-5vv4-36mx](https://github.com/advisories/GHSA-ggr8-5vv4-36mx) | Alta       | Corrigido por override `8.0.2`; remover após correção upstream | `pnpm-workspace.yaml`, lockfile, `prisma validate`, `pnpm audit`       |
+| `mysql2 <3.22` via Prisma, [GHSA-3f6p-5ww8-9rcr](https://github.com/advisories/GHSA-3f6p-5ww8-9rcr)    | Alta       | Corrigido por override `3.23.1`                                | mesmos gates                                                           |
+| `mysql2 <=3.23` via Prisma, [GHSA-rgwj-5xj2-c3m3](https://github.com/advisories/GHSA-rgwj-5xj2-c3m3)   | Média      | Corrigido pelo mesmo override                                  | `pnpm audit --audit-level moderate`: nenhuma vulnerabilidade conhecida |
+
+## 11. Progresso — Etapa 2
+
+- Pipeline em `.github/workflows/ci.yml` com lint, tipos, unitários/integração, E2E da API (EICAR real), Playwright Chromium, auditoria de dependências, CodeQL, Gitleaks, Trivy e SBOM CycloneDX.
+- ZAP baseline preparado e condicionado à variável `STAGING_URL`; fica suspenso até existir ambiente autorizado.
+- Triagem de falsos positivos documentada em `docs/security/ci.md`.
+- Gitleaks 8.30.1 percorreu os 38 commits locais. Sete alertas foram conferidos como chaves públicas de teste ou senhas fictícias; as exceções estão vinculadas aos fingerprints históricos em `.gitleaksignore`. Nova varredura retornou zero achados.
+- **Limite da evidência:** o workflow foi criado localmente; o primeiro run no GitHub ainda não ocorreu. Assim G-03 permanece aberto até todos os jobs obrigatórios ficarem verdes e a coleta dos artefatos SBOM ser confirmada.

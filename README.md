@@ -54,6 +54,10 @@ pnpm db:seed         # admin, lojas e usuários de exemplo
 pnpm dev             # web em http://localhost:3000, API em http://localhost:4000
 ```
 
+Após atualizar o código, execute `pnpm db:migrate:deploy` antes de reiniciar a
+aplicação. O banco `receita_test` usado nos testes e2e é separado do banco de
+desenvolvimento `receita` e não aplica migrations nele.
+
 Acesse http://localhost:3000/login com o e-mail `SEED_ADMIN_EMAIL` e a senha
 `SEED_ADMIN_PASSWORD` do seu `.env`. Usuários de exemplo: `gestor@receita.local`
 (lojas 101 e 102) e `colaborador@receita.local` (loja 101), com `SEED_DEMO_PASSWORD`.
@@ -194,7 +198,7 @@ Variáveis desta área (veja `.env.example`):
 É possível usar serviços instalados localmente (ex.: via Homebrew no macOS):
 
 ```bash
-brew install postgresql@17 redis seaweedfs mailpit
+brew install postgresql@17 redis seaweedfs mailpit clamav
 brew services start postgresql@17 && brew services start redis
 ```
 
@@ -214,6 +218,15 @@ weed server -dir=/caminho/dados -s3 -s3.port=8333 -s3.config=/caminho/s3.json \
   -ip=127.0.0.1 -ip.bind=127.0.0.1
 mailpit   # SMTP em 1025, UI em http://localhost:8025
 ```
+
+O ClamAV instalado pelo Homebrew requer copiar os exemplos de configuração
+de `$(brew --prefix)/etc/clamav/`, remover a linha `Example` e definir o
+diretório de assinaturas, `TCPSocket 3310` e `TCPAddr 127.0.0.1` em
+`clamd.conf`. Defina o mesmo `DatabaseDirectory` em `freshclam.conf`, execute
+`freshclam` para baixar as assinaturas e inicie com `brew services start clamav`.
+Use `curl http://localhost:4000/health/ready` para conferir `antivirus: ok`.
+As assinaturas do container são atualizadas automaticamente pelo FreshClam;
+na instalação nativa, agende `freshclam --daemon` ou atualização periódica.
 
 Atualize `DATABASE_URL`/`TEST_DATABASE_URL` no `.env` se usar outra porta. O Redis é
 compatível com o Valkey usado no Compose.

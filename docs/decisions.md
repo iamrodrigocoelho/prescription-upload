@@ -489,10 +489,16 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 
 - **Data:** 2026-10-02
 - **Decisão de implementação da Etapa 3:** usar `MalwareScanner` como port agnóstico e ClamAV em container separado como adapter open source padrão. O modo `test-clean` só é aceito em `NODE_ENV=test`; produção exige ClamAV. Um resultado `INFECTED` é bloqueado antes da cópia para o prefixo privado `quarantine/`; original e derivados são removidos com retry e auditoria. Readiness testa o scanner; atraso gera métrica/alerta aos 120/300 segundos, configuráveis. O re-scan é relatório por padrão e requer `--apply` para alterar dados. A escolha definitiva de antivírus/cloud continua com Segurança da Informação (PRD §42.12).
-- **Limite:** sem runtime ClamAV nesta estação; teste real EICAR preparado para CI/staging e obrigatório antes do go-live.
+- **Evidência posterior:** ClamAV 1.5.4 instalado localmente via Homebrew em 2026-10-02; assinaturas oficiais atualizadas, EICAR real detectado e quarentena verificada em 227 testes e2e. O mesmo fluxo ainda precisa passar no CI/staging antes do go-live.
 
 ## D-083 — Correções transitivas de dependências do Prisma 7.10
 
 - **Data:** 2026-10-02
 - **Contexto:** `pnpm audit` encontrou duas advisories altas e uma moderada em `deepmerge-ts`/`mysql2`, fixados transitivamente por Prisma 7.10. O projeto usa PostgreSQL; os caminhos afetados são sobretudo o CLI do Prisma, mas o gate de segurança deve permanecer limpo.
 - **Decisão:** `pnpm-workspace.yaml` força `deepmerge-ts@8.0.2` e `mysql2@3.23.1`, versões corrigidas. `prisma validate`, geração, migrations e testes verificam compatibilidade. O override deve ser retirado após atualização upstream do Prisma e nova auditoria. Não aceitar ignore/waiver silencioso.
+
+## D-084 — Gates de segurança no CI
+
+- **Data:** 2026-10-02
+- **Decisão:** GitHub Actions executa lint, tipos, testes unitários/integração, API E2E com EICAR real, Playwright, `pnpm audit` para alta/crítica, CodeQL `security-extended`, Gitleaks com histórico completo, Trivy nas imagens e SBOM CycloneDX. O ZAP baseline só executa com `STAGING_URL` configurada para staging autorizado. Falsos positivos exigem triagem e exceção pontual documentada; não desativar gates globalmente.
+- **Limite:** sem Docker nesta estação, os jobs de imagem e o workflow completo ainda aguardam primeira execução no GitHub. A definição da cloud e o ambiente staging seguem pendentes.

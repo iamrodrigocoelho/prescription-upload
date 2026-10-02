@@ -1,0 +1,9 @@
+# Exceções exatas do histórico: chaves públicas de teste do Google e senhas
+# fictícias de testes/lista de senhas proibidas. Triagem: docs/security/ci.md.
+bc5242a1944d25c6e48e2c15979d4745d00c74fa:.env.example:generic-api-key:100
+bc5242a1944d25c6e48e2c15979d4745d00c74fa:.env.example:generic-api-key:101
+bc5242a1944d25c6e48e2c15979d4745d00c74fa:apps/api/src/config/env.ts:generic-api-key:15
+bc5242a1944d25c6e48e2c15979d4745d00c74fa:apps/api/test/test-env.ts:generic-api-key:31
+3f9eb852705f679ec552ed47e00806e3ef68a4bc:apps/api/test/users.e2e-spec.ts:generic-api-key:94
+5d1adaeeff7f14b577fe9a8b3075ae73376ca5c0:apps/api/test/password-reset.e2e-spec.ts:generic-api-key:9
+5d1adaeeff7f14b577fe9a8b3075ae73376ca5c0:packages/shared/src/password-policy.ts:generic-api-key:13

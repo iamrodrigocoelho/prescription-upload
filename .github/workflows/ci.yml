@@ -1,0 +1,151 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality-and-e2e:
+    name: Lint, types, tests and E2E
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      POSTGRES_PASSWORD: receita_ci
+      DATABASE_URL: postgresql://receita:receita_ci@localhost:5432/receita
+      TEST_DATABASE_URL: postgresql://receita:receita_ci@localhost:5432/receita_test
+      STORAGE_ACCESS_KEY: receita
+      STORAGE_SECRET_KEY: receita_ci_storage_key
+      CLAMAV_REAL_TEST: '1'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/setup@v3
+        with:
+          cache: true
+          require-lockfile: true
+      - name: Prepare synthetic test environment
+        run: |
+          cp .env.example .env
+          for key in CPF_ENCRYPTION_KEY TOTP_ENCRYPTION_KEY; do
+            echo "$key=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+          done
+          for key in CPF_LOOKUP_PEPPER PATIENT_SEARCH_AUDIT_PEPPER SESSION_SECRET SEED_ADMIN_PASSWORD SEED_DEMO_PASSWORD; do
+            echo "$key=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          done
+      - name: Start test dependencies
+        run: docker compose up -d postgres valkey seaweedfs mailpit clamav
+      - name: Wait for PostgreSQL, Valkey and ClamAV
+        run: |
+          for attempt in $(seq 1 90); do
+            if docker compose exec -T postgres pg_isready -U receita -d receita >/dev/null 2>&1 \
+              && docker compose exec -T valkey valkey-cli ping | grep -q PONG \
+              && docker compose exec -T clamav clamdscan --ping 1 >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 10
+          done
+          docker compose ps
+          docker compose logs --tail=80 clamav
+          exit 1
+      - name: Validate database schema
+        run: pnpm --filter @receita/api exec prisma validate
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Unit and integration tests
+        run: pnpm test
+      - name: API E2E with real EICAR scan
+        run: pnpm test:e2e
+      - name: Install Playwright Chromium
+        run: pnpm --filter @receita/web exec playwright install --with-deps chromium
+      - name: Browser E2E
+        run: pnpm test:e2e:web
+      - name: Dependency audit (high and critical)
+        run: pnpm audit --audit-level high
+      - name: Show dependency logs on failure
+        if: failure()
+        run: docker compose logs --tail=80
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+      - uses: github/codeql-action/analyze@v4
+
+  secrets:
+    name: Gitleaks (code and history)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  image-security:
+    name: Image scan and SBOM (${{ matrix.image }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [api, web]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build production image
+        run: docker build -f apps/${{ matrix.image }}/Dockerfile -t receita-${{ matrix.image }}:ci .
+      - name: Fail on high or critical image vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: receita-${{ matrix.image }}:ci
+          scan-type: image
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          format: table
+      - name: Generate CycloneDX SBOM
+        if: success() || failure()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: receita-${{ matrix.image }}:ci
+          scan-type: image
+          format: cyclonedx
+          output: sbom-${{ matrix.image }}.cdx.json
+          exit-code: '0'
+      - uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: sbom-${{ matrix.image }}
+          path: sbom-${{ matrix.image }}.cdx.json
+          if-no-files-found: error
+          retention-days: 30
+
+  dast-staging:
+    name: ZAP baseline (staging)
+    if: ${{ vars.STAGING_URL != '' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: ${{ vars.STAGING_URL }}
+          allow_issue_writing: false
+          fail_action: true
