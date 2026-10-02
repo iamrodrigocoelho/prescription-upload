@@ -7,6 +7,7 @@ import { AuthGuard } from './guards/auth.guard.js';
 import { CsrfGuard } from './guards/csrf.guard.js';
 import { PermissionsGuard } from './guards/permissions.guard.js';
 import { PasswordService } from './password.service.js';
+import { PreferencesController } from './preferences.controller.js';
 import { SessionService } from './session.service.js';
 import { StoreScopeService } from './store-scope.service.js';
 import { TotpController } from './totp.controller.js';
@@ -14,7 +15,7 @@ import { TotpService } from './totp.service.js';
 
 @Global()
 @Module({
-  controllers: [AuthController, TotpController],
+  controllers: [AuthController, TotpController, PreferencesController],
   providers: [
     SessionService,
     AccountLockoutService,

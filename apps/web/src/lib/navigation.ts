@@ -8,6 +8,7 @@ export interface NavItem {
 
 /** Itens do menu do Admin. Telas futuras (Dashboard, Receitas) entram aqui. */
 export const NAV_ITEMS: readonly NavItem[] = [
+  { href: '/admin/receitas', label: 'Receitas', permission: Permission.PRESCRIPTIONS_READ },
   {
     href: '/admin/links',
     label: 'Links personalizados',

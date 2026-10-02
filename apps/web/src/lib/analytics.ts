@@ -22,6 +22,10 @@ export interface EventPayloads {
   personalized_link_opened: Record<string, never>;
   personalized_link_invalid: Record<string, never>;
   personalized_link_upload_succeeded: Record<string, never>;
+  prescription_opened: Record<string, never>;
+  prescription_file_viewed: { fileKind: 'image' | 'pdf' };
+  prescription_file_downloaded: { fileKind: 'image' | 'pdf' };
+  prescription_status_changed: { status: string };
 }
 
 export type AnalyticsEvent = keyof EventPayloads;
@@ -30,7 +34,16 @@ export interface AnalyticsProvider {
   track(event: AnalyticsEvent, payload: Record<string, string | number>): void;
 }
 
-const ALLOWED_KEYS = new Set(['entry', 'fileType', 'reason', 'fileCount', 'durationMs', 'code']);
+const ALLOWED_KEYS = new Set([
+  'entry',
+  'fileType',
+  'fileKind',
+  'reason',
+  'fileCount',
+  'durationMs',
+  'code',
+  'status',
+]);
 const SAFE_VALUE = /^[A-Za-z0-9_./-]{0,40}$/;
 
 /** Remove chaves fora da allowlist e valores com formato inesperado (defesa extra). */

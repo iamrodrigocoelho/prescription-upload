@@ -10,7 +10,11 @@ import { api } from '@/lib/api';
 import { cx } from '@/lib/cx';
 import { ROLE_LABELS } from '@/lib/labels';
 import { navItemsFor } from '@/lib/navigation';
+import { useUnviewedBadge } from '@/lib/prescriptions';
+import { RealtimeProvider } from '@/lib/realtime';
+import { NotificationCenter, SoundToggle } from './notification-center';
 import { useClearSession, useSession } from '@/lib/session';
+import { hasPermission, Permission } from '@receita/shared';
 
 /**
  * Shell do Admin. Itens de navegação filtrados por perfil (DESIGN.md §8.2);
@@ -54,6 +58,7 @@ export function AdminShell({ brand, children }: { brand: ReactNode; children: Re
   }
 
   const items = navItemsFor(me.user.role);
+  const canSeePrescriptions = hasPermission(me.user.role, Permission.PRESCRIPTIONS_READ);
   const nav = (
     <ul className="flex flex-col gap-1 md:flex-row md:gap-0">
       {items.map((item) => {
@@ -71,6 +76,7 @@ export function AdminShell({ brand, children }: { brand: ReactNode; children: Re
               )}
             >
               {item.label}
+              {item.href === '/admin/receitas' ? <UnviewedBadge /> : null}
             </Link>
           </li>
         );
@@ -78,7 +84,7 @@ export function AdminShell({ brand, children }: { brand: ReactNode; children: Re
     </ul>
   );
 
-  return (
+  const shell = (
     <div className="flex min-h-dvh flex-col">
       <a
         href="#conteudo"
@@ -95,6 +101,7 @@ export function AdminShell({ brand, children }: { brand: ReactNode; children: Re
             {nav}
           </nav>
           <div className="ml-auto flex items-center gap-2 md:ml-0">
+            {canSeePrescriptions ? <SoundToggle /> : null}
             <DropdownMenu.Root>
               <DropdownMenu.Trigger className="flex min-h-11 items-center gap-2 rounded-button px-2 text-body-sm hover:bg-hover">
                 <span className="flex flex-col items-end leading-tight">
@@ -163,5 +170,25 @@ export function AdminShell({ brand, children }: { brand: ReactNode; children: Re
         {children}
       </main>
     </div>
+  );
+  return canSeePrescriptions ? (
+    <RealtimeProvider>
+      {shell}
+      <NotificationCenter />
+    </RealtimeProvider>
+  ) : (
+    shell
+  );
+}
+
+/** Badge de não visualizadas (texto acessível, não depende só de cor). */
+function UnviewedBadge() {
+  const { data } = useUnviewedBadge(true);
+  if (!data) return null;
+  return (
+    <span className="ml-2 inline-flex min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-caption font-semibold text-on-primary">
+      {data > 99 ? '99+' : data}
+      <span className="sr-only"> não visualizadas</span>
+    </span>
   );
 }

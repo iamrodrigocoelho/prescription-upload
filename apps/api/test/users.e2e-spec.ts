@@ -277,3 +277,34 @@ describe('RBAC e gestão de usuários (e2e)', () => {
     });
   });
 });
+
+describe('Preferências do usuário (e2e)', () => {
+  let ctx: TestContext;
+  let crypto: CryptoService;
+
+  beforeAll(async () => {
+    ctx = await createTestContext();
+    crypto = ctx.app.get(CryptoService);
+  });
+
+  afterAll(async () => {
+    await ctx.app.close();
+  });
+
+  it('som de alerta começa desligado e pode ser ligado pelo próprio usuário', async () => {
+    await ctx.reset();
+    const store = await createStore(ctx.prisma);
+    const client = await loginAs(ctx.app, () =>
+      createUser(ctx.prisma, crypto, { storeIds: [store.id] }),
+    );
+    expect((await client.get('/me/preferences').expect(200)).body).toEqual({
+      notificationSound: false,
+    });
+    await client.patch('/me/preferences', { notificationSound: true }).expect(200);
+    expect((await client.get('/me/preferences').expect(200)).body).toEqual({
+      notificationSound: true,
+    });
+    await client.patch('/me/preferences', { notificationSound: 'sim' }).expect(400);
+    await client.patch('/me/preferences', { notificationSound: true, outro: 1 }).expect(400);
+  });
+});

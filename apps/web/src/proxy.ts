@@ -18,6 +18,17 @@ export function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   // Terceiros (reCAPTCHA) apenas nas rotas públicas de envio; o Admin não carrega nada externo.
   const isPublicSubmission = /^\/(l|p|enviar)(\/|$)/.test(pathname);
+  // Admin: visualizador de anexos carrega imagens/PDF direto do storage por URL assinada.
+  const storageOrigin = (() => {
+    try {
+      return new URL(process.env.STORAGE_PUBLIC_ENDPOINT || process.env.STORAGE_ENDPOINT || '')
+        .origin;
+    } catch {
+      return '';
+    }
+  })();
+  const isAdmin = pathname.startsWith('/admin');
+  const storageSrc = isAdmin && storageOrigin ? ` ${storageOrigin}` : '';
   const recaptchaScript = isPublicSubmission
     ? ' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/'
     : '';
@@ -29,11 +40,13 @@ export function proxy(request: NextRequest) {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${recaptchaScript}${isDev ? " 'unsafe-eval'" : ''}`,
     isPublicSubmission
       ? 'frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/'
-      : "frame-src 'none'",
+      : storageSrc
+        ? `frame-src${storageSrc}`
+        : "frame-src 'none'",
     // Estilos inline de atributo são usados por primitivos Radix (posicionamento).
     isDev ? "style-src 'self' 'unsafe-inline'" : `style-src-elem 'self' 'nonce-${nonce}'`,
     "style-src-attr 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    `img-src 'self' data: blob:${storageSrc}`,
     "font-src 'self'",
     "connect-src 'self'",
     "object-src 'none'",
