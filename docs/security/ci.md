@@ -8,7 +8,7 @@ teste oficial do antivírus.
 | Job             | Bloqueio                                                                     | Evidência                                        |
 | --------------- | ---------------------------------------------------------------------------- | ------------------------------------------------ |
 | quality-and-e2e | Lint, tipos, testes, E2E da API e navegador, `pnpm audit --audit-level high` | Log do job; inclui EICAR com ClamAV real         |
-| codeql          | Análise JavaScript/TypeScript com consultas `security-extended`              | Alertas CodeQL no GitHub                         |
+| sast            | Semgrep CE com regras OWASP Top 10 (`--error`)                              | Log do job e achados identificados por regra      |
 | secrets         | Gitleaks no código e histórico (`fetch-depth: 0`)                            | Log do job; sem artefatos com valores de secrets |
 | image-security  | Trivy em cada imagem, falha para HIGH/CRITICAL                               | Log e SBOM CycloneDX por imagem (30 dias)        |
 | dast-staging    | ZAP baseline; executa só se `STAGING_URL` estiver configurada                | Relatório ZAP; sem criação automática de issue   |
@@ -25,7 +25,7 @@ teste oficial do antivírus.
    responsável e data de revisão. Registrar em `docs/security/assessment.md` e
    no backlog; não desligar job nem baixar o limiar global.
 4. Reexecutar o job e registrar o link do run. Para imagem, atualizar base e
-   dependências; para CodeQL, ajustar código ou regra específica; para ZAP,
+   dependências; para Semgrep, ajustar código ou regra específica; para ZAP,
    confirmar o alerta manualmente antes de permitir uma exceção de regra.
 
 **Triagem inicial do Gitleaks (2026-10-02).** A varredura dos 38 commits locais
@@ -46,6 +46,10 @@ estiver vazia. Antes de ativá-lo, confirmar escopo e autorização em
 ## Estado da evidência
 
 Lint, tipos, testes unitários, API E2E (incluindo EICAR real), navegador em
-Chromium e `pnpm audit` passaram localmente em 2026-10-02. O workflow ainda
-precisa rodar no GitHub após o push; CodeQL, Gitleaks, Trivy e SBOM dependem
-desse run para evidência de execução. DAST aguarda staging.
+Chromium e `pnpm audit` passaram localmente em 2026-10-02. No GitHub,
+Gitleaks, Trivy para as imagens API/web e seus SBOMs passaram no run
+`37052634396`. O CodeQL completou a análise, mas não pôde publicar resultados:
+o GitHub respondeu que *code scanning* não está habilitado neste repositório
+privado. O gate foi substituído por Semgrep CE com falha em achados; sua primeira
+execução e o job completo de E2E ainda precisam ser confirmados. DAST aguarda
+staging.
