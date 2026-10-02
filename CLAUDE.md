@@ -43,6 +43,25 @@ Não avance de etapa com testes quebrados.
   CPF e mascaramento. Compilado com `tsc` para `dist/` (rode `pnpm build` após alterar).
 - `packages/config` — tsconfig/ESLint/Prettier compartilhados.
 
+## Fase 2 — área pública (módulos e convenções)
+
+- API: `modules/public` (contexto de loja/link e contexto do link em cookie),
+  `modules/submissions` (receptor multipart em streaming, `FileValidator` por magic bytes,
+  idempotência, limpeza de órfãos), `modules/captcha` (`CaptchaVerifier` → reCAPTCHA v2),
+  `modules/malware` (`MalwareScanner` no-op), `infra/metrics` (Prometheus) e
+  `common/events` (`DomainEventBus`: `prescription.submitted`).
+- Envio multipart: **campos de texto antes dos arquivos** (captcha/loja/link validados antes
+  de gravar qualquer byte). Link personalizado aceita só `captchaToken`.
+- Link personalizado: reivindique o link ANTES de criar a receita na transação
+  (`PatientLinkAccessService.consumeWithin`) — o inverso causa deadlock.
+- Metadados de auditoria: não use chaves contendo "cpf"/"token"/"secret" (são redigidas).
+- Web: `components/public` (formulário único das três entradas), `lib/submission`
+  (`canSubmit`, `addFiles`, `cpfFieldState`, envio XHR), `lib/analytics` (allowlist de
+  payload). Textos do DESIGN em `SUBMISSION_MESSAGES` (`packages/shared/src/upload.ts`).
+- CSP: Google (reCAPTCHA) liberado apenas em `/l`, `/p` e `/enviar` (`src/proxy.ts`).
+- E2E do web: `apps/web/e2e` (Playwright, viewports 320/375/desktop, axe). Rode com
+  `pnpm test:e2e:web` (portas 3000/4000 livres; banco `*_test`).
+
 ## Convenções de código
 
 - TypeScript strict; sem `any` implícito; sem `console.*` (use o logger do Nest/pino).

@@ -71,11 +71,42 @@ http://localhost:8025.
 | `pnpm typecheck`         | Verificação de tipos (strict)                                        |
 | `pnpm test`              | Testes unitários                                                     |
 | `pnpm test:e2e`          | Testes de integração/e2e da API (requer Postgres, Valkey, SeaweedFS) |
+| `pnpm test:e2e:web`      | E2E das telas públicas (Playwright + axe; requer infra e internet)   |
 | `pnpm db:migrate`        | Cria/aplica migrations em desenvolvimento                            |
 | `pnpm db:migrate:deploy` | Aplica migrations pendentes (produção/CI)                            |
 | `pnpm db:seed`           | Popula dados de desenvolvimento                                      |
 | `pnpm db:reset`          | Recria o banco de desenvolvimento do zero                            |
 | `pnpm format`            | Prettier                                                             |
+
+## Área pública (envio de receitas)
+
+| Entrada                              | Rota                                                    |
+| ------------------------------------ | ------------------------------------------------------- |
+| Link da loja (QR Code, WhatsApp)     | `/l/{slug}` — copie em Admin → Lojas                    |
+| Entrada genérica com seleção de loja | `/enviar`                                               |
+| Link personalizado (gerado no Admin) | `/p/{token}` → troca o token por cookie e segue em `/p` |
+
+Variáveis desta área (veja `.env.example`):
+
+- `RECAPTCHA_SECRET_KEY`, `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`, `RECAPTCHA_EXPECTED_HOSTNAMES` —
+  em desenvolvimento, as chaves de **teste** oficiais do Google (sempre aprovam e o widget
+  mostra um aviso). Produção exige chaves próprias "v2 Checkbox" para o domínio definitivo;
+  a API recusa a chave de teste com `NODE_ENV=production`.
+- `NEXT_PUBLIC_PRIVACY_POLICY_URL` — URL da Política de Privacidade (pendente Jurídico/DPO).
+- `PUBLIC_LOOKUP_RATE_LIMIT_*` e `PUBLIC_SUBMIT_RATE_LIMIT_*` — limites por IP.
+- `METRICS_TOKEN` — habilita `GET /metrics` (Prometheus) com `Authorization: Bearer`.
+
+### Testar no celular (rede local)
+
+1. Descubra o IP da máquina na rede (macOS: `ipconfig getifaddr en0`), por exemplo `192.168.0.10`.
+2. No `.env`, ajuste `PUBLIC_APP_URL=http://192.168.0.10:3000` (a API compara a origem
+   das requisições com esse valor) e mantenha `COOKIE_SECURE=false`.
+3. Suba com `pnpm dev` (o Next escuta em todas as interfaces; se não, use
+   `pnpm --filter @receita/web dev -- -H 0.0.0.0`).
+4. No celular, na mesma rede Wi-Fi, abra `http://192.168.0.10:3000/l/{slug}`. Os links
+   gerados no Admin já usarão o IP. A câmera ("Tirar foto") aparece em dispositivos de toque.
+
+> As chaves de teste do reCAPTCHA funcionam em qualquer domínio, inclusive IP local.
 
 ## Produção (self-hosted)
 

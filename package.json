@@ -24,7 +24,8 @@
     "db:migrate": "pnpm --filter @receita/api db:migrate",
     "db:migrate:deploy": "pnpm --filter @receita/api db:migrate:deploy",
     "db:seed": "pnpm --filter @receita/api db:seed",
-    "db:reset": "pnpm --filter @receita/api db:reset"
+    "db:reset": "pnpm --filter @receita/api db:reset",
+    "test:e2e:web": "pnpm build && pnpm --filter @receita/web test:e2e:web"
   },
   "devDependencies": {
     "@receita/config": "workspace:*",

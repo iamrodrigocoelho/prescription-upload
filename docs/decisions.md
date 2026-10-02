@@ -304,3 +304,8 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 
 - **Data:** 2026-10-01
 - **Decisão:** interface `AnalyticsProvider` (no-op em produção, console em dev) com os eventos públicos do PRD §29 tipados por evento. `sanitize` aceita apenas chaves de uma allowlist (`entry`, `fileType`, `reason`, `fileCount`, `durationMs`, `code`) e valores curtos sem espaços — CPF, token, nome de arquivo ou texto livre são descartados. Ferramenta de analytics definitiva: pendente.
+
+## D-053 — E2E do frontend
+
+- **Data:** 2026-10-01
+- **Decisão:** Playwright (Chromium) em três viewports (320 px, 375 px com toque, desktop 1280 px) contra builds reais: API com `NODE_ENV=test` (permite a chave de teste do reCAPTCHA e o mock de pacientes, sem qualquer exceção na validação de produção) e web em build de produção, no banco `*_test` e prefixo Redis `rv-e2e:`. O widget **real** do reCAPTCHA com a chave de teste é usado (requer internet). Dados via seed + API do Admin. axe-core verifica as telas públicas (formulário, sucesso, loja indisponível, link inválido, seleção de loja) — nenhuma violação séria/crítica, excluindo apenas o iframe do Google. Também verifica ausência de rolagem horizontal em 320 px.
