@@ -4,7 +4,7 @@
 # antes de subir uma nova versão.
 
 FROM node:24.21.0-alpine AS build
-RUN npm install -g pnpm@11.1.3
+RUN npm install -g pnpm@11.4.0
 WORKDIR /repo
 COPY . .
 RUN pnpm install --frozen-lockfile

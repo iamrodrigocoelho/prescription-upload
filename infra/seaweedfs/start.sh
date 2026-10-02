@@ -14,4 +14,6 @@ cat > /tmp/s3.json <<JSON
   ]
 }
 JSON
-exec weed server -dir=/data -s3 -s3.port=8333 -s3.config=/tmp/s3.json -volume.max=0 -master.volumeSizeLimitMB=1024
+exec weed server -dir=/data -s3 -s3.port=8333 -s3.config=/tmp/s3.json \
+  -volume.max="${SEAWEEDFS_VOLUME_MAX:-0}" \
+  -master.volumeSizeLimitMB="${SEAWEEDFS_VOLUME_SIZE_MB:-1024}"

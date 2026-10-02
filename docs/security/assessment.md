@@ -166,8 +166,9 @@ TLS e configuração real da borda; criptografia em repouso e backups da cloud; 
 
 ## 11. Progresso — Etapa 2
 
-- Pipeline em `.github/workflows/ci.yml` com lint, tipos, unitários/integração, E2E da API (EICAR real), Playwright Chromium, auditoria de dependências, CodeQL, Gitleaks, Trivy e SBOM CycloneDX.
+- Pipeline em `.github/workflows/ci.yml` com lint, tipos, unitários/integração, E2E da API (EICAR real), Playwright Chromium, auditoria de dependências, Semgrep, Gitleaks, Trivy e SBOM CycloneDX.
 - ZAP baseline preparado e condicionado à variável `STAGING_URL`; fica suspenso até existir ambiente autorizado.
 - Triagem de falsos positivos documentada em `docs/security/ci.md`.
 - Gitleaks 8.30.1 percorreu os 38 commits locais. Sete alertas foram conferidos como chaves públicas de teste ou senhas fictícias; as exceções estão vinculadas aos fingerprints históricos em `.gitleaksignore`. Nova varredura retornou zero achados.
-- **Limite da evidência:** o workflow foi criado localmente; o primeiro run no GitHub ainda não ocorreu. Assim G-03 permanece aberto até todos os jobs obrigatórios ficarem verdes e a coleta dos artefatos SBOM ser confirmada.
+- **Evidência parcial no GitHub:** Gitleaks, Trivy e SBOM das imagens passaram; lint, tipos, unitários e E2E da API com EICAR real passaram. CodeQL não pôde publicar porque *code scanning* não está habilitado no repositório privado, então o gate SAST passou a ser Semgrep CE. A primeira execução dele encontrou referências mutáveis de actions e falta de configurações de proteção do pnpm; as correções estão em validação. Os testes Playwright do primeiro run falharam por SeaweedFS sem volume gravável após a instalação do navegador no runner; a configuração de CI foi ajustada. G-03 permanece aberto até todos os jobs obrigatórios ficarem verdes.
+- **Risco residual de transição (Média; Segurança da Informação):** o lockfile atual, auditado sem vulnerabilidades altas/críticas conhecidas, contém versões publicadas há menos de sete dias. `trustLockfile: true` aceita esse snapshot para que o CI siga instalável; novas resoluções obedecem `minimumReleaseAge: 10080` e `trustPolicy: no-downgrade`. Toda alteração do lockfile exige revisão de Segurança. A aceitação definitiva desse risco para produção ainda depende da área responsável; não é uma dispensa geral dos scans.

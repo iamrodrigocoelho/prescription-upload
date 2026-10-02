@@ -1,7 +1,7 @@
 # Imagem de produção do web (Next.js standalone). Build a partir da raiz:
 #   docker build -f apps/web/Dockerfile -t receita-web .
 FROM node:24.21.0-alpine AS build
-RUN npm install -g pnpm@11.1.3
+RUN npm install -g pnpm@11.4.0
 WORKDIR /repo
 COPY . .
 RUN pnpm install --frozen-lockfile

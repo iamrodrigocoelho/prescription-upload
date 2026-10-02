@@ -5,6 +5,14 @@ O workflow [CI](../../.github/workflows/ci.yml) executa em `push` para `main`,
 geradas no runner, o banco é `receita_test` e a suíte EICAR usa o arquivo de
 teste oficial do antivírus.
 
+O pnpm bloqueia dependências transitivas de fontes externas, exige publicação
+com pelo menos sete dias para **novas resoluções** e impede queda de nível de
+confiança do publicador. O lockfile já existente foi auditado com `pnpm audit`
+e Trivy antes da ativação; `trustLockfile: true` evita reprovar suas versões
+anteriores à nova política. Mudanças no lockfile exigem revisão de dependências
+e do resultado dos scans no PR. Este aceite transitório não substitui a revisão
+de Segurança antes de produção.
+
 | Job             | Bloqueio                                                                     | Evidência                                        |
 | --------------- | ---------------------------------------------------------------------------- | ------------------------------------------------ |
 | quality-and-e2e | Lint, tipos, testes, E2E da API e navegador, `pnpm audit --audit-level high` | Log do job; inclui EICAR com ClamAV real         |
