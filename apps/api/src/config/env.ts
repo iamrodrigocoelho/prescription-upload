@@ -102,6 +102,11 @@ export const envSchema = z
       z.string().min(32).optional(),
     ),
 
+    // Tempo real (SSE)
+    REALTIME_HEARTBEAT_SECONDS: z.coerce.number().int().min(5).max(60).default(15),
+    REALTIME_REVALIDATE_SECONDS: z.coerce.number().int().min(5).max(300).default(30),
+    REALTIME_MAX_STREAMS_PER_USER: z.coerce.number().int().min(1).max(20).default(5),
+
     // Worker (fila de anexos e outbox)
     OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().min(100).max(10_000).default(500),
     ATTACHMENTS_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(2),

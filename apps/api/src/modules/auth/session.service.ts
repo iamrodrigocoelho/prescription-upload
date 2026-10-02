@@ -4,6 +4,7 @@ import type { Env } from '../../config/env.js';
 import { type Session, SessionState, type User } from '../../generated/prisma/client.js';
 import { generateToken, sha256Hex } from '../../infra/crypto/primitives.js';
 import { PrismaService } from '../../infra/prisma/prisma.service.js';
+import { RealtimeControl } from '../realtime/realtime-control.js';
 
 /** Janela para concluir a configuração obrigatória de 2FA (escanear QR Code). */
 const ENROLLMENT_TTL_MINUTES = 15;
@@ -35,6 +36,7 @@ export class SessionService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(ENV) private readonly env: Env,
+    private readonly control: RealtimeControl,
   ) {}
 
   async create(
@@ -113,6 +115,7 @@ export class SessionService {
       data: { revokedAt: new Date(), revokedReason: 'rotated' },
     });
     if (revoked.count !== 1) return null;
+    await this.control.invalidateSession(sessionId);
     const previous = await this.prisma.session.findUniqueOrThrow({ where: { id: sessionId } });
     return this.create(previous.userId, SessionState.ACTIVE, client);
   }
@@ -122,6 +125,7 @@ export class SessionService {
       where: { id: sessionId, revokedAt: null },
       data: { revokedAt: new Date(), revokedReason: reason },
     });
+    await this.control.invalidateSession(sessionId);
   }
 
   /** Revoga todas as sessões do usuário (opcionalmente preservando a atual). */
@@ -138,6 +142,7 @@ export class SessionService {
       },
       data: { revokedAt: new Date(), revokedReason: reason },
     });
+    await this.control.invalidateUser(userId);
     return result.count;
   }
 }

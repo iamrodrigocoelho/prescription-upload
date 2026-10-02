@@ -15,6 +15,7 @@ import { MailProvider } from '../../infra/mail/mail.provider.js';
 import { PrismaService } from '../../infra/prisma/prisma.service.js';
 import { RateLimitService } from '../../infra/rate-limit/rate-limit.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { RealtimeControl } from '../realtime/realtime-control.js';
 import { inviteEmail, passwordResetEmail } from './mail-templates.js';
 
 /**
@@ -31,6 +32,7 @@ export class PasswordService {
     private readonly rateLimit: RateLimitService,
     private readonly audit: AuditService,
     @Inject(ENV) private readonly env: Env,
+    private readonly control: RealtimeControl,
   ) {}
 
   /**
@@ -134,6 +136,7 @@ export class PasswordService {
         tx,
       );
     });
+    await this.control.invalidateUser(user.id);
   }
 
   /** Emite um token novo e invalida os pendentes do mesmo propósito. */

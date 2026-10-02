@@ -18,6 +18,7 @@ import { verifyPassword } from '../../infra/crypto/password-hasher.js';
 import { PrismaService } from '../../infra/prisma/prisma.service.js';
 import { RateLimitService } from '../../infra/rate-limit/rate-limit.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { RealtimeControl } from '../realtime/realtime-control.js';
 import { AccountLockoutService } from './account-lockout.service.js';
 import { AuthService, type SessionGrant } from './auth.service.js';
 import {
@@ -68,6 +69,7 @@ export class TotpService {
     private readonly rateLimit: RateLimitService,
     private readonly audit: AuditService,
     private readonly auth: AuthService,
+    private readonly control: RealtimeControl,
   ) {}
 
   async setup(auth: AuthContext): Promise<TotpSetupResponse> {
@@ -138,6 +140,8 @@ export class TotpService {
       );
     });
     await this.rateLimit.reset('mfaSession', auth.sessionId);
+    // As demais sessões foram revogadas na transação acima.
+    await this.control.invalidateUser(user.id);
 
     const recoveryCodes = codes.map(formatRecoveryCode);
     if (auth.sessionState === SessionState.MFA_ENROLLMENT_REQUIRED) {

@@ -17,6 +17,7 @@ import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../infra/prisma/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { PasswordService } from '../auth/password.service.js';
+import { RealtimeControl } from '../realtime/realtime-control.js';
 
 const userInclude = {
   storeAccess: {
@@ -52,6 +53,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly passwords: PasswordService,
+    private readonly control: RealtimeControl,
   ) {}
 
   async list(query: ListUsersQuery): Promise<Paginated<AdminUserView>> {
@@ -216,6 +218,8 @@ export class UsersService {
       }
     });
 
+    // Desativação, perfil ou escopo alterados: streams de tempo real reconectam com o novo estado.
+    if (activeChanged || roleChanged || input.storeIds) await this.control.invalidateUser(id);
     return this.get(id);
   }
 
@@ -225,12 +229,13 @@ export class UsersService {
     await this.assertStoresExist(storeIds);
     const current = user.storeAccess.map((access) => access.storeId);
     await this.prisma.$transaction((tx) => this.replaceStores(tx, id, current, storeIds));
+    await this.control.invalidateUser(id);
     return this.get(id);
   }
 
   async revokeSessions(id: string): Promise<{ revoked: number }> {
     await this.findOrThrow(id);
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.session.updateMany({
         where: { userId: id, revokedAt: null },
         data: { revokedAt: new Date(), revokedReason: 'admin_revoked' },
@@ -246,6 +251,8 @@ export class UsersService {
       );
       return { revoked: count };
     });
+    await this.control.invalidateUser(id);
+    return result;
   }
 
   /** Para quem perdeu o autenticador: remove o 2FA e encerra as sessões. */
@@ -271,6 +278,7 @@ export class UsersService {
         tx,
       );
     });
+    await this.control.invalidateUser(id);
     return this.get(id);
   }
 
