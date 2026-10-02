@@ -439,3 +439,15 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 - **Data:** 2026-10-02
 - **Decisão (aprovada):** não implementada (PRD §23 cita "caso a função seja habilitada"; §8.6 encerra a ação no vínculo). Um vínculo errado hoje só pode ser corrigido por intervenção técnica auditada. **Proposta para quando o negócio habilitar:** apenas Gestor e Admin; motivo obrigatório de uma lista fechada (paciente errado, homônimo, duplicidade, solicitação do paciente), sem texto livre; o vínculo anterior permanece no `PatientLinkHistory` (novo tipo `CORRECTION`, com quem corrigiu); `AuditLog` `prescription.patient_link_corrected` com IDs externos anterior e novo; mesma busca com referência opaca.
 - **[pendente negócio]** decidir se e quando habilitar.
+
+## D-075 — Interface do vínculo de paciente
+
+- **Data:** 2026-10-02
+- **Decisão:** no detalhe, bloco "Paciente": botão "Vincular paciente" apenas com "Não identificado" e permissão; abre um diálogo modal (Radix Dialog, foco preso, Esc fecha) com o componente `PatientSearch` (critério CPF/telefone/e-mail → busca → resultados mascarados no formato do DESIGN §13.4 → seleção por rádio → resumo "Confirme o vínculo de …" → "Confirmar vínculo"). Estados: buscando, sem resultados, indisponível (503), limite atingido (429), seleção expirada (nova busca) e conflito (409: aviso "O vínculo não foi feito", recarga do detalhe, fila e contadores). Andamento e quantidade de resultados anunciados por `role="status"` (aria-live). Foco: campo de busca ao abrir; ao fechar, volta ao botão; após vincular (o botão some), vai para o título "Paciente". O diálogo fica montado fora da condição, para que um vínculo feito por outro usuário durante o fluxo apareça como conflito em vez de fechar a janela. Tempo real: `prescription.patient_linked` recarrega a fila (rótulo) e o detalhe aberto (com aviso). Timeline distingue vínculo manual, automático por CPF e por link. Analytics (PRD §29): `patient_search_performed {searchType, resultCount}` e `patient_linked {}` — nunca o termo.
+
+## D-076 — Testes e2e: servidor com porta fixa por arquivo
+
+- **Data:** 2026-10-02
+- **Contexto:** falhas intermitentes "socket hang up" em testes sem relação entre si (multipart, TOTP), não resolvidas totalmente pelo keep-alive de D-058.
+- **Causa:** o supertest inicia o servidor em porta efêmera quando ele não está escutando e o fecha quando o último pedido pendente termina; testes sequenciais abrem e fecham servidores a cada lote. O cliente reaproveita conexões keep-alive, e uma conexão encerrada pelo `server.close()` podia ser reutilizada quando o SO devolvia a mesma porta.
+- **Decisão:** `createTestContext` faz `app.listen(0, '127.0.0.1')` uma vez; o supertest usa esse endereço e não fecha o servidor. Verificado com 3 execuções completas seguidas (618 testes) sem falhas.

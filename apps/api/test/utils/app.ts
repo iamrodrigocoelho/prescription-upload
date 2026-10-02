@@ -43,6 +43,10 @@ export async function createTestContext(
   configureApp(app);
   await app.init();
   tuneHttpServer(app);
+  // Porta fixa durante todo o arquivo de teste. Sem isso, o supertest abre e fecha
+  // um servidor efêmero a cada lote de requisições; conexões keep-alive do cliente
+  // podem então ser reaproveitadas num servidor já fechado ("socket hang up").
+  await app.listen(0, '127.0.0.1');
 
   const prisma = app.get(PrismaService);
   const redis = app.get<Redis>(REDIS);

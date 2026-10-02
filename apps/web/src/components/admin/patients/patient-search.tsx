@@ -11,6 +11,7 @@ import { Search } from 'lucide-react';
 import { type FormEvent, useEffect, useId, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/field';
+import { track } from '@/lib/analytics';
 import { api, ApiError, errorMessage } from '@/lib/api';
 import { cx } from '@/lib/cx';
 
@@ -74,6 +75,9 @@ export function PatientSearch({
         body: { type: searchType, query: term, context },
       }),
     onMutate: () => onSelect(null),
+    // Só o tipo e a contagem (PRD §29) — nunca o termo buscado.
+    onSuccess: (data) =>
+      track('patient_search_performed', { searchType, resultCount: data.results.length }),
   });
 
   // Seleções valem só no contexto em que foram feitas: mudar o contexto limpa tudo.

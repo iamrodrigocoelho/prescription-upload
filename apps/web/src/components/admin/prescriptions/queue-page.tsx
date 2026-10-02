@@ -133,6 +133,10 @@ export function QueuePage() {
             : data,
         );
       }
+      // A identificação mudou (automática ou manual): recarrega para trazer o rótulo.
+      if (event.type === 'prescription.patient_linked') {
+        void client.invalidateQueries({ queryKey: queueKey });
+      }
       if (event.type === 'counters.updated')
         void client.invalidateQueries({ queryKey: ['prescriptions', 'counters'] });
     },

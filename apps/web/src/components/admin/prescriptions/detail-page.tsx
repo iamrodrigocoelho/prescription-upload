@@ -1,8 +1,8 @@
 'use client';
 
-import { SOURCE_CHANNEL_LABELS, type RealtimeEvent } from '@receita/shared';
+import { Permission, SOURCE_CHANNEL_LABELS, type RealtimeEvent } from '@receita/shared';
 import { useQueryClient } from '@tanstack/react-query';
-import { Download, Eye } from 'lucide-react';
+import { Download, Eye, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
@@ -17,17 +17,33 @@ import { formatDateTime } from '@/lib/format';
 import { formatFileSize } from '@/lib/submission/files';
 import { usePrescription } from '@/lib/prescriptions';
 import { useRealtime } from '@/lib/realtime';
+import { useSession } from '@/lib/session';
 import { IdentificationBadge } from './badges';
 import { CpfReveal } from './cpf-reveal';
 import { downloadFile, FileViewer } from './file-viewer';
 import { FileThumb } from './file-thumb';
+import { LinkPatientDialog } from './link-patient-dialog';
 import { StatusControl } from './status-control';
 import { Timeline } from './timeline';
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+  headingRef,
+}: {
+  title: string;
+  children: React.ReactNode;
+  headingRef?: React.Ref<HTMLHeadingElement>;
+}) {
   return (
     <Card>
-      <h2 className="mb-3 text-h3 font-semibold">{title}</h2>
+      <h2
+        ref={headingRef}
+        tabIndex={headingRef ? -1 : undefined}
+        className="mb-3 text-h3 font-semibold"
+      >
+        {title}
+      </h2>
       {children}
     </Card>
   );
@@ -38,7 +54,14 @@ export function DetailPage({ id }: { id: string }) {
   const detail = usePrescription(id);
   const client = useQueryClient();
   const notify = useToast();
+  const { can } = useSession();
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const [linkOpen, setLinkOpen] = useState(false);
+  // Foco ao fechar o diálogo de vínculo: volta ao botão; após vincular (o botão
+  // some), vai para o título do bloco "Paciente" (WCAG 2.4.3).
+  const patientHeading = useRef<HTMLHeadingElement | null>(null);
+  const linkTrigger = useRef<HTMLButtonElement | null>(null);
+  const justLinked = useRef(false);
   // Devolve o foco ao botão que abriu o visualizador (WCAG 2.4.3).
   const returnFocus = useRef<HTMLElement | null>(null);
   useEffect(() => {
@@ -60,6 +83,14 @@ export function DetailPage({ id }: { id: string }) {
 
   const onEvent = useCallback(
     (event: RealtimeEvent) => {
+      if (
+        event.type === 'prescription.patient_linked' &&
+        event.prescriptionId === id &&
+        detail.data?.identificationStatus !== event.identificationStatus
+      ) {
+        notify('A identificação do paciente foi atualizada.', 'info');
+        void client.invalidateQueries({ queryKey: ['prescriptions', 'detail', id] });
+      }
       if (event.type === 'prescription.status_changed' && event.prescriptionId === id) {
         if (detail.data && event.version > detail.data.version) {
           notify('O status desta receita foi atualizado.');
@@ -128,12 +159,38 @@ export function DetailPage({ id }: { id: string }) {
             </dl>
           </Section>
 
-          <Section title="Paciente">
-            <div className="flex flex-col gap-2 text-body-sm">
+          <Section title="Paciente" headingRef={patientHeading}>
+            <div className="flex flex-col items-start gap-2 text-body-sm">
               <IdentificationBadge status={data.identificationStatus} />
               <p>{data.patientLabel ?? 'Nenhum paciente vinculado.'}</p>
-              {/* Espaço reservado para "Vincular paciente" (Fase 4). */}
-              <div className="min-h-2" data-slot="vincular-paciente" />
+              {data.identificationStatus === 'NOT_IDENTIFIED' &&
+              can(Permission.PRESCRIPTIONS_LINK_PATIENT) ? (
+                <Button
+                  ref={linkTrigger}
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setLinkOpen(true)}
+                >
+                  <UserPlus className="size-4" aria-hidden />
+                  Vincular paciente
+                </Button>
+              ) : null}
+              {/* Fora da condição: se outro usuário vincular durante o fluxo, o diálogo
+                  permanece aberto e mostra o conflito. */}
+              <LinkPatientDialog
+                prescriptionId={data.id}
+                open={linkOpen}
+                onOpenChange={setLinkOpen}
+                onLinked={() => {
+                  justLinked.current = true;
+                }}
+                onCloseAutoFocus={(event) => {
+                  event.preventDefault();
+                  const target = justLinked.current ? patientHeading.current : linkTrigger.current;
+                  justLinked.current = false;
+                  (target ?? patientHeading.current)?.focus();
+                }}
+              />
             </div>
           </Section>
 

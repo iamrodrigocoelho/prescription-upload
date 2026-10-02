@@ -34,8 +34,16 @@ test.describe('Operação da loja', () => {
     const page = await context.newPage();
     const collaborator = demoCollaborator();
     await loginPage(page, collaborator.email, collaborator.password);
+    // Conta as linhas só depois que a fila carregou (evita contar 0 durante o carregamento).
+    const queueLoaded = page.waitForResponse(
+      (res) => res.url().includes('/api/prescriptions?') && res.ok(),
+    );
     await page.goto('/admin/receitas');
     await expect(page.getByRole('heading', { name: 'Receitas' })).toBeVisible();
+    await queueLoaded;
+    await expect(
+      page.getByTestId('queue-row').or(page.getByText('Nenhuma receita encontrada')).first(),
+    ).toBeVisible();
     const newChip = page.getByRole('button', { name: /Novas/ });
     const before = Number((await newChip.locator('span').last().textContent()) ?? '0');
     const rowsBefore = await newRows(page).count();

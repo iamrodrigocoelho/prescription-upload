@@ -87,7 +87,6 @@ describe('Tempo real via SSE (e2e)', () => {
   beforeAll(async () => {
     ctx = await createTestContext();
     crypto = ctx.app.get(CryptoService);
-    await ctx.app.listen(0, '127.0.0.1');
     base = `http://127.0.0.1:${(ctx.app.getHttpServer().address() as AddressInfo).port}`;
     publisher = new RealtimePublisher(ctx.app.get<Redis>(REDIS), ctx.app.get<Env>(ENV));
   });

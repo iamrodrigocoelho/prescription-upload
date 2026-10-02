@@ -19,7 +19,9 @@ function describe(entry: TimelineEntry): string {
     case 'patient_linked':
       return entry.linkType === 'PERSONALIZED_LINK'
         ? 'Paciente vinculado pelo link personalizado'
-        : 'Paciente vinculado';
+        : entry.linkType === 'AUTOMATIC_CPF'
+          ? 'Paciente identificado automaticamente pelo CPF'
+          : 'Paciente vinculado manualmente';
     case 'cpf_revealed':
       return 'CPF completo exibido';
     default:

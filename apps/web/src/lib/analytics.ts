@@ -26,6 +26,8 @@ export interface EventPayloads {
   prescription_file_viewed: { fileKind: 'image' | 'pdf' };
   prescription_file_downloaded: { fileKind: 'image' | 'pdf' };
   prescription_status_changed: { status: string };
+  patient_search_performed: { searchType: 'cpf' | 'phone' | 'email'; resultCount: number };
+  patient_linked: Record<string, never>;
 }
 
 export type AnalyticsEvent = keyof EventPayloads;
@@ -43,6 +45,8 @@ const ALLOWED_KEYS = new Set([
   'durationMs',
   'code',
   'status',
+  'searchType',
+  'resultCount',
 ]);
 const SAFE_VALUE = /^[A-Za-z0-9_./-]{0,40}$/;
 
