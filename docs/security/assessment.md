@@ -155,3 +155,11 @@ TLS e configuração real da borda; criptografia em repouso e backups da cloud; 
 
 - **G-01/SR-01 (Alta): mitigado em código.** Apenas `CLEAN` gera URL; scanner ClamAV via TCP `INSTREAM`, health check e container próprio, falha fechada, quarentena retomável, exclusão de original/derivados, AuditLog e alerta técnico. `NOT_SCANNED` legado é tratado por re-scan. Evidência: `clamav-scanner.ts`, `attachment-processor.service.ts`, `prescription-files.service.ts`, `test/worker.e2e-spec.ts` e `docs/security/antivirus.md`.
 - **Evidência local:** lint, typecheck, unitários, 226 testes e2e da API e 35 testes Playwright passaram; um teste e2e EICAR real ficou ignorado por configuração. Ele está pronto em `test/clamav-real.e2e-spec.ts`, mas depende de Docker/clamd, ausentes nesta estação. Segurança/Operações devem executá-lo em CI/staging antes de homologação e registrar o resultado. Não declarar G-01 plenamente encerrado até isso ocorrer.
+
+## 10. Achados adicionais da auditoria de dependências
+
+| Achado | Severidade | Estado | Evidência |
+|---|---|---|---|
+| `deepmerge-ts <8` via Prisma, [GHSA-ggr8-5vv4-36mx](https://github.com/advisories/GHSA-ggr8-5vv4-36mx) | Alta | Corrigido por override `8.0.2`; remover após correção upstream | `pnpm-workspace.yaml`, lockfile, `prisma validate`, `pnpm audit` |
+| `mysql2 <3.22` via Prisma, [GHSA-3f6p-5ww8-9rcr](https://github.com/advisories/GHSA-3f6p-5ww8-9rcr) | Alta | Corrigido por override `3.23.1` | mesmos gates |
+| `mysql2 <=3.23` via Prisma, [GHSA-rgwj-5xj2-c3m3](https://github.com/advisories/GHSA-rgwj-5xj2-c3m3) | Média | Corrigido pelo mesmo override | `pnpm audit --audit-level moderate`: nenhuma vulnerabilidade conhecida |
