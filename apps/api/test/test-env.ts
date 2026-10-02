@@ -21,6 +21,7 @@ export function applyTestEnv(): void {
     REDIS_KEY_PREFIX: 'rv-test:',
     CPF_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
     CPF_LOOKUP_PEPPER: 'test-pepper-test-pepper-test-pepper-0001',
+    PATIENT_SEARCH_AUDIT_PEPPER: 'test-search-pepper-test-search-pepper-01',
     TOTP_ENCRYPTION_KEY: Buffer.alloc(32, 2).toString('base64'),
     SESSION_SECRET: 'test-session-secret-test-session-secret-01',
     COOKIE_SECURE: 'false',

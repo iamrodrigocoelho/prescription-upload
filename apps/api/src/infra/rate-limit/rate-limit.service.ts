@@ -13,7 +13,9 @@ export type LimiterName =
   | 'forgotPasswordEmail'
   | 'resetPasswordIp'
   | 'mfaSession'
-  | 'patientSearchUser'
+  | 'patientSearchUserMinute'
+  | 'patientSearchUserHour'
+  | 'patientSearchSession'
   | 'publicLookupIp'
   | 'publicSubmitIp'
   | 'cpfRevealUser';
@@ -50,7 +52,21 @@ export class RateLimitService {
       forgotPasswordEmail: make('forgot-email', 3, 3600),
       resetPasswordIp: make('reset-ip', 20, 900),
       mfaSession: make('mfa-session', 5, env.MFA_PENDING_TTL_MINUTES * 60),
-      patientSearchUser: make('patient-search', 30, 60),
+      patientSearchUserMinute: make(
+        'patient-search-user-min',
+        env.PATIENT_SEARCH_LIMIT_USER_PER_MINUTE,
+        60,
+      ),
+      patientSearchUserHour: make(
+        'patient-search-user-hour',
+        env.PATIENT_SEARCH_LIMIT_USER_PER_HOUR,
+        3600,
+      ),
+      patientSearchSession: make(
+        'patient-search-session',
+        env.PATIENT_SEARCH_LIMIT_SESSION_PER_HOUR,
+        3600,
+      ),
       publicLookupIp: make(
         'public-lookup-ip',
         env.PUBLIC_LOOKUP_RATE_LIMIT_POINTS,

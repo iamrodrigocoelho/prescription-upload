@@ -480,8 +480,11 @@ describe('Links personalizados (e2e)', () => {
 
     it('contexto de loja fora do escopo ou inativa é recusado antes de consultar a API', async () => {
       const { storeB, collaboratorA } = await setup();
+      // Recusas são auditadas (DENIED); nenhuma busca chega a ser executada.
       const searches = () =>
-        ctx.prisma.auditLog.count({ where: { action: AuditAction.PATIENT_SEARCH_PERFORMED } });
+        ctx.prisma.auditLog.count({
+          where: { action: AuditAction.PATIENT_SEARCH_PERFORMED, result: { not: 'DENIED' } },
+        });
       const before = await searches();
       await collaboratorA
         .post('/patients/search', {
@@ -525,7 +528,7 @@ describe('Links personalizados (e2e)', () => {
     it('aplica rate limit por usuário', async () => {
       const { storeA, collaboratorA } = await setup();
       const body = { type: 'email', query: 'x@example.com', context: { storeId: storeA.id } };
-      for (let i = 0; i < 30; i += 1) {
+      for (let i = 0; i < 20; i += 1) {
         await collaboratorA.post('/patients/search', body).expect(200);
       }
       await collaboratorA.post('/patients/search', body).expect(429);

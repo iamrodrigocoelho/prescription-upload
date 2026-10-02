@@ -35,6 +35,8 @@ export const envSchema = z
     // Criptografia de campos sensíveis (PRD §25)
     CPF_ENCRYPTION_KEY: key32,
     CPF_LOOKUP_PEPPER: secret,
+    /** HMAC do termo de busca de pacientes na auditoria (D-071). */
+    PATIENT_SEARCH_AUDIT_PEPPER: secret,
     TOTP_ENCRYPTION_KEY: key32,
     /** Segredo para derivar tokens CSRF a partir da sessão. */
     SESSION_SECRET: secret,
@@ -120,6 +122,11 @@ export const envSchema = z
     PATIENT_API_TIMEOUT_MS: z.coerce.number().int().min(200).max(10_000).default(2_000),
     PATIENT_API_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
     PATIENT_API_BREAKER_THRESHOLD: z.coerce.number().int().min(1).max(50).default(5),
+    // Busca manual: limites anti-enumeração (D-071)
+    PATIENT_SEARCH_LIMIT_USER_PER_MINUTE: z.coerce.number().int().positive().default(20),
+    PATIENT_SEARCH_LIMIT_USER_PER_HOUR: z.coerce.number().int().positive().default(100),
+    PATIENT_SEARCH_LIMIT_SESSION_PER_HOUR: z.coerce.number().int().positive().default(60),
+    PATIENT_SEARCH_MAX_RESULTS: z.coerce.number().int().min(1).max(20).default(10),
     /** Validade da referência opaca de seleção de paciente (D-069). */
     PATIENT_SELECTION_TTL_SECONDS: z.coerce.number().int().min(60).max(3_600).default(600),
     PATIENT_API_BREAKER_HALF_OPEN_MS: z.coerce.number().int().min(1_000).default(30_000),
