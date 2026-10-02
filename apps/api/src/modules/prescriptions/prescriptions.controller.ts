@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import {
   type ListPrescriptionsQuery,
   listPrescriptionsQuerySchema,
@@ -7,7 +7,10 @@ import {
   type PrescriptionCountersQuery,
   type PrescriptionDetail,
   prescriptionCountersQuerySchema,
+  type OperationalStatus,
   type PrescriptionListResponse,
+  type UpdatePrescriptionStatusInput,
+  updatePrescriptionStatusSchema,
 } from '@receita/shared';
 import { CurrentAuth, RequirePermissions } from '../../common/auth/decorators.js';
 import type { AuthContext } from '../../common/auth/auth.types.js';
@@ -42,5 +45,20 @@ export class PrescriptionsController {
     @Param('id', UuidParamPipe) id: string,
   ): Promise<PrescriptionDetail> {
     return this.prescriptions.detail(auth, id);
+  }
+
+  @Patch(':id/status')
+  @RequirePermissions(Permission.PRESCRIPTIONS_UPDATE_STATUS)
+  changeStatus(
+    @CurrentAuth() auth: AuthContext,
+    @Param('id', UuidParamPipe) id: string,
+    @Body(new ZodValidationPipe(updatePrescriptionStatusSchema))
+    body: UpdatePrescriptionStatusInput,
+  ): Promise<{
+    operationalStatus: OperationalStatus;
+    version: number;
+    allowedTransitions: OperationalStatus[];
+  }> {
+    return this.prescriptions.changeStatus(auth, id, body);
   }
 }

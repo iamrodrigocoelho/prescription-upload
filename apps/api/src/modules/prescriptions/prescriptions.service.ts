@@ -3,6 +3,14 @@ import {
   allowedTransitions,
   ApiErrorCode,
   AuditAction,
+  AuditResult,
+  canTransition,
+  hasPermission,
+  isFinalStatus,
+  isReopen,
+  type OperationalStatus,
+  Permission,
+  type UpdatePrescriptionStatusInput,
   type PrescriptionDetail,
   type PrescriptionFileView,
   type ListPrescriptionsQuery,
@@ -185,6 +193,87 @@ export class PrescriptionsService {
         })),
       }),
     };
+  }
+
+  /**
+   * Alteração do status operacional (PRD §11.4) pela matriz compartilhada, com
+   * controle otimista por `version`: se outro usuário alterou antes → 409.
+   */
+  async changeStatus(
+    auth: AuthContext,
+    id: string,
+    input: UpdatePrescriptionStatusInput,
+  ): Promise<{
+    operationalStatus: OperationalStatus;
+    version: number;
+    allowedTransitions: OperationalStatus[];
+  }> {
+    const submission = await this.findScoped(auth, id);
+    const from = submission.operationalStatus;
+    const to = input.toStatus;
+
+    if (isFinalStatus(from) && !hasPermission(auth.user.role, Permission.PRESCRIPTIONS_REOPEN)) {
+      await this.audit.recordSafely({
+        action: AuditAction.AUTHZ_DENIED,
+        entityType: 'PrescriptionSubmission',
+        entityId: id,
+        storeId: submission.storeId,
+        result: AuditResult.DENIED,
+        metadata: { reason: 'reopen_not_allowed', from, to },
+      });
+      throw new AppError(
+        ApiErrorCode.FORBIDDEN,
+        'Somente gestores e administradores podem reabrir receitas.',
+      );
+    }
+    if (input.version !== submission.version) throw this.conflict();
+    if (!canTransition(from, to, auth.user.role)) {
+      throw new AppError(ApiErrorCode.VALIDATION_FAILED, 'Transição de status não permitida.', [
+        { path: 'toStatus', message: 'Transição de status não permitida.' },
+      ]);
+    }
+
+    const version = submission.version + 1;
+    await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.prescriptionSubmission.updateMany({
+        where: { id, version: submission.version, operationalStatus: from },
+        data: { operationalStatus: to, version: { increment: 1 } },
+      });
+      if (updated.count !== 1) throw this.conflict();
+      await tx.statusHistory.create({
+        data: { submissionId: id, fromStatus: from, toStatus: to, changedByUserId: auth.user.id },
+      });
+      await this.audit.record(
+        {
+          action: isReopen(from, to)
+            ? AuditAction.PRESCRIPTION_REOPENED
+            : AuditAction.PRESCRIPTION_STATUS_CHANGED,
+          entityType: 'PrescriptionSubmission',
+          entityId: id,
+          storeId: submission.storeId,
+          metadata: { from, to },
+        },
+        tx,
+      );
+      await this.outbox.add(tx, 'prescription.status_changed', {
+        submissionId: id,
+        storeId: submission.storeId,
+        operationalStatus: to,
+        version,
+      });
+    });
+    return {
+      operationalStatus: to,
+      version,
+      allowedTransitions: allowedTransitions(to, auth.user.role),
+    };
+  }
+
+  private conflict(): AppError {
+    return new AppError(
+      ApiErrorCode.CONFLICT,
+      'Esta receita foi alterada por outro usuário. Atualize para ver o estado atual.',
+    );
   }
 
   fileView(file: Prisma.PrescriptionFileGetPayload<object>): PrescriptionFileView {
