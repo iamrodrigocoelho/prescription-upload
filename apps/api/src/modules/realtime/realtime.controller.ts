@@ -7,7 +7,7 @@ import {
   type StoreScope,
 } from '@receita/shared';
 import type { Request, Response } from 'express';
-import { CurrentAuth, RequirePermissions } from '../../common/auth/decorators.js';
+import { CurrentAuth, RequirePermissions, RouteScope } from '../../common/auth/decorators.js';
 import type { AuthContext } from '../../common/auth/auth.types.js';
 import { AppError } from '../../common/errors.js';
 import { ENV } from '../../config/config.module.js';
@@ -23,6 +23,7 @@ function sameScope(a: StoreScope, b: StoreScope): boolean {
 
 /** SSE autenticado pela sessão (cookie). Eventos só com IDs (PRD §12.5, §19.3). */
 @Controller('realtime')
+@RouteScope('STORE')
 @RequirePermissions(Permission.PRESCRIPTIONS_READ)
 export class RealtimeController {
   constructor(

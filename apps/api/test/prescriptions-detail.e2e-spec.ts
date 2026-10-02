@@ -42,7 +42,7 @@ describe('Detalhe da receita (e2e)', () => {
       files: [{ mimeType: 'image/jpeg' }, { mimeType: 'application/pdf' }],
     });
 
-    const res = await collaboratorA.get(`/prescriptions/${submission.id}`).expect(200);
+    const res = await collaboratorA.post(`/prescriptions/${submission.id}/open`).expect(200);
     expect(res.body).toMatchObject({
       id: submission.id,
       store: { id: a.id, storeName: 'Loja A' },
@@ -86,6 +86,18 @@ describe('Detalhe da receita (e2e)', () => {
     expect(refreshed.firstViewedAt).toBeNull();
   });
 
+  it('GET não marca primeira visualização; POST exige token CSRF', async () => {
+    const { a, collaboratorA } = await setup();
+    const submission = await createSubmission(ctx.prisma, crypto, { storeId: a.id });
+    await collaboratorA.agent.get(`/prescriptions/${submission.id}`).expect(200);
+    await collaboratorA.agent.post(`/prescriptions/${submission.id}/open`).expect(403);
+    const unchanged = await ctx.prisma.prescriptionSubmission.findUniqueOrThrow({
+      where: { id: submission.id },
+    });
+    expect(unchanged.firstViewedAt).toBeNull();
+    await collaboratorA.post(`/prescriptions/${submission.id}/open`).expect(200);
+  });
+
   it('primeira visualização atômica: aberturas simultâneas geram um único registro', async () => {
     const { a, collaboratorA } = await setup();
     const other = await loginAs(ctx.app, () =>
@@ -94,9 +106,9 @@ describe('Detalhe da receita (e2e)', () => {
     const submission = await createSubmission(ctx.prisma, crypto, { storeId: a.id });
 
     await Promise.all([
-      collaboratorA.get(`/prescriptions/${submission.id}`).expect(200),
-      other.get(`/prescriptions/${submission.id}`).expect(200),
-      collaboratorA.get(`/prescriptions/${submission.id}`).expect(200),
+      collaboratorA.post(`/prescriptions/${submission.id}/open`).expect(200),
+      other.post(`/prescriptions/${submission.id}/open`).expect(200),
+      collaboratorA.post(`/prescriptions/${submission.id}/open`).expect(200),
     ]);
 
     const firstViews = await ctx.prisma.auditLog.count({
@@ -119,8 +131,8 @@ describe('Detalhe da receita (e2e)', () => {
   it('toda abertura é auditada com loja e ator', async () => {
     const { a, collaboratorA } = await setup();
     const submission = await createSubmission(ctx.prisma, crypto, { storeId: a.id });
-    await collaboratorA.get(`/prescriptions/${submission.id}`).expect(200);
-    await collaboratorA.get(`/prescriptions/${submission.id}`).expect(200);
+    await collaboratorA.post(`/prescriptions/${submission.id}/open`).expect(200);
+    await collaboratorA.post(`/prescriptions/${submission.id}/open`).expect(200);
     const opens = await ctx.prisma.auditLog.findMany({
       where: { action: AuditAction.PRESCRIPTION_OPENED, entityId: submission.id },
     });

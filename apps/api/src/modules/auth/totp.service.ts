@@ -235,18 +235,27 @@ export class TotpService {
         },
       });
       await tx.totpRecoveryCode.deleteMany({ where: { userId: user.id } });
+      await tx.session.updateMany({
+        where: { userId: user.id, revokedAt: null, id: { not: auth.sessionId } },
+        data: { revokedAt: new Date(), revokedReason: 'mfa_disabled' },
+      });
       await this.audit.record(
         { action: AuditAction.AUTH_TOTP_DISABLED, entityType: 'User', entityId: user.id },
         tx,
       );
     });
+    await this.control.invalidateUser(user.id);
   }
 
   async regenerateRecoveryCodes(auth: AuthContext, code: string): Promise<string[]> {
+    await this.rateLimit.assertNotBlocked('mfaSession', auth.sessionId);
     const user = await this.loadUser(auth.user.id);
     if (!user.totpEnabled || !(await this.consumeTotp(user, code))) {
+      await this.lockout.registerFailure(user.id);
+      await this.rateLimit.penalize('mfaSession', auth.sessionId);
       throw new AppError(ApiErrorCode.INVALID_MFA_CODE);
     }
+    await this.rateLimit.reset('mfaSession', auth.sessionId);
     const codes = Array.from({ length: RECOVERY_CODE_COUNT }, generateRecoveryCode);
     await this.prisma.$transaction(async (tx) => {
       await tx.totpRecoveryCode.deleteMany({ where: { userId: user.id } });

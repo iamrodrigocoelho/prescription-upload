@@ -470,3 +470,17 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 - **Data:** 2026-10-02
 - **Decisão (aprovada — gráficos sem biblioteca):** `/admin/dashboard` (item "Dashboard" primeiro no menu, como no DESIGN §13.5; a entrada padrão do Admin continua sendo a fila). Filtros na URL: período (Hoje, 7 dias — padrão —, 30 dias, Personalizado com "De/Até") e loja (seletor só quando há mais de uma loja no acesso; "Todas as lojas do meu acesso" = consolidado). Componentes: 8 cards de indicadores (agrupados com `role="group"` rotulado), identificação, links (só com permissão), tempos (mediana, "90% em até", amostra; aviso "Informativo, sem meta de prazo"), linha por dia (recebidas contínua, finalizadas tracejada — distinção sem depender de cor), barras por status e ranking das 10 lojas com valores sempre visíveis, e tabela "Lojas com pendências" com link para a fila filtrada. Gráficos em SVG/HTML próprios: legenda com totais, valores nos pontos em períodos de até 14 dias e tabela equivalente ("Ver dados em tabela"); cores de `tokens.css` (`--rv-color-chart-*`, provisórias — DESIGN §16 item 8). Tempo real: `counters.updated` recarrega o dashboard no máximo a cada 15 s. Admin em desktop (testes Playwright no projeto desktop, como a fila).
 - **Descartado:** Recharts/Chart.js (dependência e estilos inline para dois tipos de gráfico).
+
+## D-080 — Liberação de arquivos somente após varredura
+
+- **Data:** 2026-10-02
+- **Contexto:** na Fase 3, D-057 permitia acesso a `NOT_SCANNED` enquanto o scanner era no-op. O plano de hardening e a regra de bloqueio foram aprovados pelo responsável do produto nesta sessão.
+- **Decisão:** durante a Fase 5, `PENDING`, `NOT_SCANNED` e falhas de scanner ficam bloqueados para visualização/download até resultado `CLEAN`; `INFECTED` permanece em quarentena. Alerta após 2 minutos e escalonamento após 5 minutos, com limiares configuráveis. O PRD §9.4 registra a regra. A estratégia definitiva de antivírus do PRD §42.12 continua pendente de Segurança da Informação; ClamAV é o adapter padrão open source, sem assumir provedor de cloud.
+- **Descartado:** liberar anexos não escaneados ou tratar indisponibilidade como `CLEAN`.
+
+## D-081 — Primeira visualização como mutação explícita
+
+- **Data:** 2026-10-02
+- **Contexto:** `GET /prescriptions/{id}` alterava `first_viewed_at` e gravava auditoria; navegação externa com cookie `SameSite=Lax` podia produzir o efeito sem ação na interface.
+- **Decisão:** manter o GET como leitura pura e usar `POST /prescriptions/{id}/open` com CSRF para a abertura real. A interface chama o POST; o evento e a auditoria seguem atômicos. PRD §26.3 atualizado.
+- **Descartado:** exigir CSRF em GET com efeito colateral, mantendo semântica HTTP incorreta.

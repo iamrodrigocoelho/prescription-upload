@@ -23,13 +23,14 @@ import {
   type UpdateUserInput,
   updateUserSchema,
 } from '@receita/shared';
-import { CurrentAuth, RequirePermissions } from '../../common/auth/decorators.js';
+import { CurrentAuth, RequirePermissions, RouteScope } from '../../common/auth/decorators.js';
 import type { AuthContext } from '../../common/auth/auth.types.js';
 import { UuidParamPipe } from '../../common/pipes/uuid-param.pipe.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { UsersService } from './users.service.js';
 
 @Controller('admin/users')
+@RouteScope('GLOBAL')
 @RequirePermissions(Permission.USERS_MANAGE)
 export class UsersController {
   constructor(private readonly users: UsersService) {}

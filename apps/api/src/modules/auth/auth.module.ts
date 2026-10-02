@@ -6,6 +6,7 @@ import { AuthService } from './auth.service.js';
 import { AuthGuard } from './guards/auth.guard.js';
 import { CsrfGuard } from './guards/csrf.guard.js';
 import { PermissionsGuard } from './guards/permissions.guard.js';
+import { ScopeGuard } from './guards/scope.guard.js';
 import { PasswordService } from './password.service.js';
 import { PreferencesController } from './preferences.controller.js';
 import { SessionService } from './session.service.js';
@@ -23,10 +24,11 @@ import { TotpService } from './totp.service.js';
     PasswordService,
     TotpService,
     StoreScopeService,
-    // Ordem importa: autenticação → CSRF → permissão. Escopo de loja é aplicado nas consultas.
+    // Ordem importa: autenticação → CSRF → permissão → escopo.
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
+    { provide: APP_GUARD, useClass: ScopeGuard },
   ],
   exports: [SessionService, PasswordService, StoreScopeService],
 })

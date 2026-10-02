@@ -417,6 +417,13 @@ O backend deverá:
 - registrar download em auditoria;
 - suportar varredura antimalware, preferencialmente assíncrona.
 
+**Regra de liberação (aprovada para o hardening):** arquivos em `PENDING`,
+`NOT_SCANNED` ou com scanner indisponível não podem ser visualizados nem baixados.
+Somente o resultado `CLEAN` libera URL temporária; `INFECTED` permanece bloqueado
+em quarentena. A fila de varredura deve gerar alerta técnico após 2 minutos de
+espera e escalonamento após 5 minutos, com limiares operacionais configuráveis.
+Nenhuma falha do scanner deve converter implicitamente um arquivo em `CLEAN`.
+
 ### 9.5 Pré-visualização
 
 Antes do envio, o cliente deverá poder:
@@ -1359,11 +1366,16 @@ POST   /auth/totp/verify
 ```text
 GET    /prescriptions
 GET    /prescriptions/{id}
+POST   /prescriptions/{id}/open
 PATCH  /prescriptions/{id}/status
 POST   /prescriptions/{id}/patient-link
 GET    /prescriptions/{id}/files/{fileId}/view-url
 GET    /prescriptions/{id}/files/{fileId}/download-url
 ```
+
+`GET /prescriptions/{id}` é leitura sem efeito colateral. A abertura pela interface
+usa `POST /prescriptions/{id}/open` com proteção CSRF; só este registra abertura,
+primeira visualização e emite o evento correspondente.
 
 ### 26.4 Pacientes — integração futura
 

@@ -25,6 +25,7 @@ import {
   AllowSessionStates,
   CurrentAuth,
   Public,
+  RouteScope,
 } from '../../common/auth/decorators.js';
 import type { AuthContext } from '../../common/auth/auth.types.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
@@ -36,6 +37,7 @@ import { PasswordService } from './password.service.js';
 import { clearSessionCookie, setSessionCookie } from './session-cookie.js';
 
 @Controller('auth')
+@RouteScope('SELF')
 export class AuthController {
   constructor(
     private readonly auth: AuthService,

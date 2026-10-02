@@ -88,16 +88,14 @@ export class AuthService {
       return this.fail(ipKey, user, 'wrong_password');
     }
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        failedLoginCount: 0,
-        lockedUntil: null,
-        ...(needsRehash(user.passwordHash)
-          ? { passwordHash: await hashPassword(input.password) }
-          : {}),
-      },
-    });
+    // O contador só é limpo em completeLogin, após o segundo fator. Zerá-lo aqui
+    // permitiria reiniciar o limite de tentativas TOTP com outro login por senha.
+    if (needsRehash(user.passwordHash)) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: await hashPassword(input.password) },
+      });
+    }
 
     const state = user.totpEnabled
       ? SessionState.PENDING_MFA

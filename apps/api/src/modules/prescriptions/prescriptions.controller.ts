@@ -30,7 +30,7 @@ import {
   type UpdatePrescriptionStatusInput,
   updatePrescriptionStatusSchema,
 } from '@receita/shared';
-import { CurrentAuth, RequirePermissions } from '../../common/auth/decorators.js';
+import { CurrentAuth, RequirePermissions, RouteScope } from '../../common/auth/decorators.js';
 import type { AuthContext } from '../../common/auth/auth.types.js';
 import { UuidParamPipe } from '../../common/pipes/uuid-param.pipe.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
@@ -39,6 +39,7 @@ import { PrescriptionPatientLinkService } from './prescription-patient-link.serv
 import { PrescriptionsService } from './prescriptions.service.js';
 
 @Controller('prescriptions')
+@RouteScope('STORE')
 @RequirePermissions(Permission.PRESCRIPTIONS_READ)
 export class PrescriptionsController {
   constructor(
@@ -69,6 +70,15 @@ export class PrescriptionsController {
     @Param('id', UuidParamPipe) id: string,
   ): Promise<PrescriptionDetail> {
     return this.prescriptions.detail(auth, id);
+  }
+
+  @Post(':id/open')
+  @HttpCode(HttpStatus.OK)
+  open(
+    @CurrentAuth() auth: AuthContext,
+    @Param('id', UuidParamPipe) id: string,
+  ): Promise<PrescriptionDetail> {
+    return this.prescriptions.open(auth, id);
   }
 
   @Patch(':id/status')

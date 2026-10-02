@@ -6,13 +6,14 @@ import {
   type Paginated,
   Permission,
 } from '@receita/shared';
-import { RequirePermissions } from '../../common/auth/decorators.js';
+import { RequirePermissions, RouteScope } from '../../common/auth/decorators.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../infra/prisma/prisma.service.js';
 
 /** Consulta da trilha de auditoria (somente leitura — não há rotas de escrita). */
 @Controller('admin/audit-logs')
+@RouteScope('GLOBAL')
 @RequirePermissions(Permission.AUDIT_READ)
 export class AuditController {
   constructor(private readonly prisma: PrismaService) {}

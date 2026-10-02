@@ -10,13 +10,14 @@ import {
   type PatientLinkView,
   Permission,
 } from '@receita/shared';
-import { CurrentAuth, RequirePermissions } from '../../common/auth/decorators.js';
+import { CurrentAuth, RequirePermissions, RouteScope } from '../../common/auth/decorators.js';
 import type { AuthContext } from '../../common/auth/auth.types.js';
 import { UuidParamPipe } from '../../common/pipes/uuid-param.pipe.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { PatientLinksService } from './patient-links.service.js';
 
 @Controller('admin/patient-links')
+@RouteScope('STORE')
 export class PatientLinksController {
   constructor(private readonly links: PatientLinksService) {}
 

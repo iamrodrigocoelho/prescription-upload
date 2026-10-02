@@ -241,6 +241,7 @@ export function FileViewer({
             ) : (
               <iframe
                 src={url}
+                sandbox="allow-downloads"
                 title={`Arquivo ${file.position} da receita (PDF)`}
                 className="size-full border-0 bg-surface"
               />

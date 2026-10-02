@@ -5,12 +5,13 @@ import {
   patientSearchSchema,
   Permission,
 } from '@receita/shared';
-import { CurrentAuth, RequirePermissions } from '../../common/auth/decorators.js';
+import { CurrentAuth, RequirePermissions, RouteScope } from '../../common/auth/decorators.js';
 import type { AuthContext } from '../../common/auth/auth.types.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { PatientsService } from './patients.service.js';
 
 @Controller('patients')
+@RouteScope('STORE')
 export class PatientsController {
   constructor(private readonly patients: PatientsService) {}
 

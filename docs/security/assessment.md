@@ -1,0 +1,152 @@
+# Diagnóstico de segurança e prontidão — Fase 5 (hardening e pré-produção)
+
+- **Data:** 2026-10-02
+- **Base:** código em `main` (`2afb3e1`, fim da Fase 4), PRD §9.4, §10.3, §15, §21, §22, §23, §24, §34, §35, §36, §39, §40, §42, §43; DESIGN §11, §12, §15. O relatório de aderência à DoD da Fase 4 citado no pedido não foi encontrado entre os arquivos do repositório nem no último commit; a avaliação de §43 nesta versão usa o PRD e o código como evidência, e deverá ser confrontada com o relatório quando ele for fornecido.
+- **Método:**
+  1. levantamento de lacunas contra os requisitos (equipe de desenvolvimento);
+  2. **revisão independente de código** por um subagente sem acesso às decisões de implementação (`docs/decisions.md`, `CLAUDE.md`, `README.md`) nem ao rascunho deste assessment, com referência [OWASP ASVS 5.0.0 nível 2](https://owasp.org/projects/asvs/). Ele confirmou SR-01 e SR-04 e reportou SR-12, SR-18 e SR-19; os demais SR já constavam no rascunho inicial e foram mantidos como hipóteses ou conferidos diretamente onde indicado;
+  3. consolidação, verificação no código dos achados de autenticação (SR-02, SR-03, SR-08 confirmados) e classificação final.
+- **Nenhum código foi alterado nesta etapa.**
+
+Escala de severidade: **Crítica** (exploração direta de dados sensíveis, corrigir já), **Alta** (bloqueia produção), **Média** (corrigir antes da produção ou aceitar formalmente), **Baixa** (backlog), **Info** (registro).
+Esforço: **P** ≤ ½ dia · **M** 1–2 dias · **G** ≥ 3 dias.
+
+## 1. Resumo
+
+- **Nenhum achado crítico identificado nesta revisão estática.** Autorização deny-by-default com guards globais, escopo de loja aplicado na consulta (sem IDOR encontrado nas rotas examinadas), tokens de 256 bits persistidos só como hash, AES-256-GCM com AAD, Argon2id, CSRF em métodos de escrita, upload com magic bytes e limites de parser, CSP com nonce.
+- **Bloqueios de produção (Alta):** antivírus no-op com arquivos não verificados acessíveis (SR-01/G-01), ausência de retenção/descarte (SR-04/G-02), ausência de pipeline de CI versionado e evidência de análises de dependências/segredos (G-03), rotação de chaves inexistente (G-04), backups e criptografia em repouso não definidos/testados (G-05, G-06) e força bruta de TOTP (SR-02, **reclassificado de Média para Alta** — ver §3).
+- **Dependências externas** (não decidíveis pela equipe técnica): cloud, antivírus definitivo, política de retenção, obrigatoriedade de 2FA, domínio (PRD §42), aprovação de Jurídico/DPO, pentest, tokens de marca.
+
+## 2. Lacunas contra PRD §21, §22, §35 e §43
+
+| ID | Lacuna | Referência | Sev. | Esforço | Etapa |
+|---|---|---|---|---|---|
+| G-01 | Antivírus é no-op; `NOT_SCANNED`/`PENDING` recebem URL assinada; produção pode subir com o no-op | PRD §9.4, §35, §42.12 · SR-01 | **Alta** | M | 3 |
+| G-02 | Sem job de retenção/descarte; `retention_until` só é gravado; sem legal hold. Objetos órfãos, sessões e tokens expirados também não têm rotina de limpeza identificada | PRD §22.1, §22.3, RF-036 · SR-04 | **Alta** | G | 4 |
+| G-03 | Não há pipeline de CI versionado no repositório (lint/testes, SCA, SAST, segredos, imagens, SBOM, DAST); eventual CI externa não foi apresentada | PRD §35 | **Alta** | M | 2 |
+| G-04 | Chaves CPF/TOTP sem identificador de versão (o prefixo `v1:` é do formato) e sem rotação; pepper do HMAC sem procedimento; segredos só por env | PRD §35 ("rotação de credenciais"), RNF-007 | **Alta** | M | 5 |
+| G-05 | Política de backup e teste de restauração inexistentes; comportamento de exclusão no storage (versões/backups) não documentado | PRD §22.1 ("backups protegidos") | **Alta** | M | 4, 8 |
+| G-06 | Criptografia em repouso do banco, storage e backups não configurada nem documentada (SeaweedFS local sem cifragem) | RNF-007, §22.1 | **Alta** (infra) | P (doc) | 5, 9 |
+| G-07 | Sem teste automatizado de cobertura de guards por rota; sem matriz de autorização verificada | PRD §35 | Média | M | 1 |
+| G-08 | CSP com `style-src-attr 'unsafe-inline'`; HSTS sem `preload`; storage sem headers próprios | PRD §35 · SR-05, SR-17 | Média | M | 1 |
+| G-09 | Sem checklist ASVS L2 com evidências | PRD §35 | Média | M | 1 |
+| G-10 | 2FA só por usuário (Admin por padrão); sem política por perfil configurável | PRD §15.3, §22.1, §42.7 | Média | M | 6 |
+| G-11 | Observabilidade sem tracing distribuído, sem error tracking com scrubbing, sem alertas, sem dashboards como código; worker sem health check | PRD §34, RNF-009 | Média | G | 7 |
+| G-12 | Sem testes de redação de dados sensíveis cobrindo logs/traces/erros/analytics de ponta a ponta | Regras inegociáveis · SR-09 | Média | M | 7 |
+| G-13 | Sem testes de carga, metas ou orçamento de performance pública | RNF-004, RNF-010, RNF-011 | Média | G | 8 |
+| G-14 | Pontos únicos de falha não analisados (Redis, storage, worker); o encerramento do worker e SSE existe no código, mas não há teste de drenagem/failover | RNF-010 | Média | M | 8 |
+| G-15 | Imagens: worker sem imagem/entrypoint próprio documentado, filesystem read-only não configurado; compose com `:latest` (seaweedfs, mailpit); migrations sem estratégia expand/contract documentada | PRD §36 | Média | M | 9 |
+| G-16 | Sem definição de ambientes nem gerador de dados sintéticos para staging | PRD §36 | Média | M | 9 |
+| G-17 | E2E só em Chromium; sem auditoria manual WCAG; sem plano de testes em dispositivos | RNF-003, RNF-013, DESIGN §12 | Média | M | 10 |
+| G-18 | Tokens oficiais de marca inexistentes: contraste final não verificável | DESIGN §16 | Média (bloqueante p/ revisão final) | — (Marca) | 10 |
+| G-19 | Sem modelo de ameaças, escopo de pentest, inventário de dados pessoais, runbooks e go-live checklist | PRD §22.1, §35, §40, §43 | Média | G | 11 |
+| G-20 | Sem retenção definida para `audit_logs` e logs técnicos (volume cresce com buscas e aberturas) | PRD §22.3 (extensão) | Baixa | P (proposta) | 4 |
+| G-21 | Evento de adulteração do link personalizado sem `entityId`/`storeId` (registrado antes de resolver o link) | PRD §23 (campos mínimos) | Baixa | P | 1 |
+| G-22 | Pentest não realizado; aprovação interna de Segurança/LGPD pendente | PRD §35, §43 | **Bloqueante** (externo) | — | 11 (escopo) |
+| G-23 | `GET /prescriptions/:id` marca primeira visualização e gera evento, enquanto CSRF libera métodos GET | PRD §35 · SR-12 | Média | P | 1 |
+| G-24 | Token do link personalizado aparece na URL por requisito do PRD; histórico/sincronização do navegador continuam sendo vias residuais apesar de uso único e troca por cookie | PRD §6.5, §40 · SR-19 | Média (residual) | P (análise) | 11 / Segurança |
+
+### Estado preliminar da Definition of Done (PRD §43)
+
+Classificação baseada em leitura de código, sem repetir nesta etapa a suíte da Fase 4; "implementado" não equivale a homologado. O relatório de DoD da Fase 4 não estava disponível para confronto.
+
+| Critério de §43 | Estado preliminar / lacuna | Evidência principal |
+|---|---|---|
+| Importar lojas e gerar link próprio | Implementado; validar base oficial | `stores.controller.ts`, `public-context.controller.ts` |
+| Gerar, copiar, expirar/revogar link personalizado | Implementado; revisar risco residual de token em URL (G-24) | `patient-links.controller.ts`, `patient-links.service.ts` |
+| Envio por link sem CPF e vínculo correto | Implementado; retestar ponta a ponta | `submissions.service.ts`, `patient-link-access.service.ts` |
+| Envio sem login pelo celular | Implementado; dispositivo real pendente | `submissions.controller.ts`, `file-dropzone.tsx` |
+| CPF opcional | Implementado | `submissions.service.ts` |
+| Upload até 10 × 5 MB e formatos permitidos | Implementado; endurecer PDF/antimalware (G-01) | `file-validator.ts`, `upload-receiver.ts` |
+| Câmera em dispositivo compatível | Atributo `capture` presente; teste iOS/Android pendente | `file-dropzone.tsx` |
+| reCAPTCHA obrigatório no backend | Implementado; credenciais e domínio de produção pendentes | `recaptcha-v2.verifier.ts`, `submissions.service.ts` |
+| Confirmação de sucesso | Implementada; retestar e2e | `public-submission.spec.ts` |
+| Receita em tempo real na loja correta | Implementado; carga e borda SSE pendentes | `realtime-hub.service.ts`, `realtime.controller.ts` |
+| Colaborador visualizar/baixar arquivos | Implementado, mas inseguro até bloquear não escaneados (G-01) | `prescription-files.service.ts` |
+| Colaborador alterar status | Implementado; retestar autorização | `prescriptions.controller.ts` |
+| Vínculo manual de paciente | Implementado; retestar escopo e concorrência | `prescription-patient-link.service.ts` |
+| Integração por CPF pronta para API real | Contrato/adapter preparado; endpoint real ainda indefinido | `http-patient.provider.ts`, `patient-identification.service.ts` |
+| Dashboard por escopo | Implementado; retestar e2e | `dashboard.controller.ts`, `dashboard.service.ts` |
+| RBAC entre lojas | Implementado nas consultas examinadas; teste completo de rotas/escopos pendente (G-07) | `permissions.guard.ts`, `store-scope.service.ts` |
+| 2FA TOTP habilitável | Implementado; força bruta deve ser corrigida (SR-02) | `totp.service.ts`, `totp.controller.ts` |
+| Auditoria de eventos críticos | Implementada; cobertura integral a verificar (G-21) | `audit.service.ts`, `audit.controller.ts` |
+| Arquivos em storage privado | Adapter S3/URL temporária; ACL e borda reais não verificadas | `s3-storage.provider.ts` |
+| Observabilidade mínima | Logs/métricas/health presentes; tracing/alertas faltam (G-11/G-12) | `metrics.service.ts`, `health.controller.ts` |
+| Aderência visual ao DESIGN | Implementação presente; revisão final de contraste/tokens pendente (G-18) | `tokens.css`, `DESIGN.md` §16 |
+| Assets oficiais de `/img/logo/` | Cópia no build presente; aprovação final da Marca pendente | `brand.tsx`, `sync-brand.mjs` |
+| Segurança e LGPD aprovadas para produção | **Pendente:** pentest, Jurídico/DPO, controles altos e operações (G-01–G-06/G-22) | PRD §43; sem evidência de aprovação |
+
+## 3. Achados da revisão independente (SR)
+
+Achados do diagnóstico inicial e da revisão independente atual. Esta última confirmou SR-01/SR-04 e acrescentou ou reclassificou SR-12/SR-18/SR-19; os marcados "a confirmar" dependem de infraestrutura ou de comportamento de biblioteca. Os demais precisam ser reconfirmados na Etapa 1 antes de serem declarados resolvidos.
+
+| ID | Sev. | Título | Evidência | Etapa / destino |
+|---|---|---|---|---|
+| SR-01 | **Alta** | Antivírus no-op; arquivos não verificados servidos à equipe | `malware.module.ts:6`, `malware-scanner.ts:20-23`, `prescription-files.service.ts:58` | 3 (= G-01) |
+| SR-02 | **Alta** *(revisor: Média)* | Força bruta de TOTP: `failedLoginCount` zerado ao acertar a senha, antes do 2FA; limitador de MFA só por sessão | `auth.service.ts:91-100` (confirmado), `totp.service.ts:171-193`, `rate-limit.service.ts:54` | 1 |
+| SR-03 | Média | Regeneração de códigos de recuperação sem rate limit nem contagem de falhas | `totp.controller.ts:75-82`, `totp.service.ts:245-249` (confirmado) | 1 |
+| SR-04 | Média→**Alta** | Retenção/descarte inexistente | `submissions.service.ts:232` | 4 (= G-02) |
+| SR-05 | Baixa | Storage sem headers de segurança; iframe do PDF sem `sandbox` | `Caddyfile.example`, `file-viewer.tsx:242` | 1 |
+| SR-06 | Baixa (a confirmar) | Bomba de descompressão HEIC (dimensões não limitadas antes de alocar) | `derivatives.ts:25-31` | 3 |
+| SR-07 | Baixa | Ativar/reconfigurar 2FA sem reautenticação | `totp.controller.ts:31-50` | 1 |
+| SR-08 | Baixa | Desativar 2FA não revoga as outras sessões | `totp.service.ts:227-242` (confirmado) | 1 |
+| SR-09 | Baixa | Stack trace no log sem redação de CPF | `redact.ts:27` | 7 (com G-12) |
+| SR-10 | Baixa (a confirmar) | Dono da tabela pode desligar o trigger append-only (API e migrations com o mesmo role) | `20261001205025_init/migration.sql:399-418` | 9 (roles separados) |
+| SR-11 | Baixa (a confirmar) | IP de rate limit depende da topologia (`TRUST_PROXY=1`, XFF) | `app.setup.ts:24` | 9 (requisito de deploy) |
+| SR-12 | **Média** | GET do detalhe altera `firstViewedAt` e emite evento; navegação externa pode enviar cookie SameSite=Lax sem CSRF | `prescriptions.controller.ts:66-71`, `prescriptions.service.ts:95-124`, `csrf.guard.ts:9,27-29` | 1 (= G-23) |
+| SR-13 | Info | `/metrics` alcançável pela internet via `/api/*` (protegido por token) | `metrics.controller.ts:12-31` | 7/9 (bloquear na borda) |
+| SR-14 | Info | Códigos de recuperação com SHA-256 sem custo | `recovery-codes.ts:21-23` | 1 |
+| SR-15 | Info | Lockout permite DoS de contas conhecidas | `account-lockout.service.ts` | 7 (alerta) |
+| SR-16 | Info | Nome original do arquivo persistido sem necessidade aparente | `upload-receiver.ts:183` | Backlog (DPO) |
+| SR-17 | Info | `style-src-attr 'unsafe-inline'`; Admin pode ser criado sem 2FA; auditoria anônima do link limitada só por IP; limite de streams SSE por instância; override de permissões | diversos | 1, 6, backlog |
+| SR-18 | Média | Objeto de upload órfão é registrado após falha de exclusão, mas não existe consumidor para o registro | `storage-cleanup.service.ts:20-35`, `schema.prisma:416-426` | 4 (= G-02) |
+| SR-19 | Média (residual) | Token bearer do link personalizado faz parte da URL, passível de histórico/sincronização do navegador; mitigado por uso único, no-referrer/no-store e cookie | `patient-links.service.ts:117-150`, `apps/web/src/app/(public)/p/[token]/page.tsx:7-9` | 11 (= G-24), validação de Segurança |
+
+**Reclassificação de SR-02:** o segundo fator existe justamente para o cenário "senha comprometida". O contador por conta é zerado após acertar a senha, antes de concluir o 2FA, e o limite por sessão pode ser reiniciado em outro login. Para contas Admin/Gestor com acesso a dados de saúde de várias lojas, isso enfraquece o segundo fator — tratado como bloqueante de produção.
+
+**Reclassificação de SR-12:** embora exija sessão e um ID conhecido, a navegação externa de primeiro nível pode incluir o cookie `SameSite=Lax` no GET e alterar o estado operacional sem ação na interface. Corrigir como mutação protegida ou validar Origin/Fetch Metadata para este GET.
+
+## 4. Controles verificados como adequados (resumo)
+
+Guards globais auth → CSRF → permissão → escopo, com `@Public()` explícito (14 rotas públicas no inventário atual, incluindo `/metrics` com token de serviço); escopo na consulta e 404 fora do escopo; SSE filtrado por escopo (inclusive replay) com revalidação e encerramento por revogação; sessões opacas com hash, inatividade 30 min/absoluto 12 h, rotação no MFA, cookie `__Host-` HttpOnly/Secure/SameSite; Argon2id; reset de senha sem enumeração; TOTP com anti-replay; CSRF HMAC + Origin + `Sec-Fetch-Site`; validação Zod nas entradas examinadas; upload em streaming com limites e magic bytes; URLs assinadas de 60 s após escopo e vínculo, auditadas e sem cache; link personalizado de uso único atômico com erro neutro; busca de paciente com contexto, limites, HMAC e referência opaca; CPF cifrado e mascarado; logs com redação; analytics com allowlist; helmet na API, CSP com nonce no web; env validado com proibições em produção; auditoria append-only por trigger; SQL parametrizado nas consultas examinadas. Detalhes por item no `asvs-checklist.md` (Etapa 1).
+
+## 5. Não avaliável apenas pelo código
+
+TLS e configuração real da borda; criptografia em repouso e backups da cloud; privilégios reais dos roles de banco/Redis; vulnerabilidades conhecidas nas dependências (será coberto pelo CI, Etapa 2); comportamento dos leitores de PDF das estações; SMTP de produção (SPF/DKIM/DMARC); monitoramento e resposta a incidentes em operação.
+
+## 6. Decisões em aberto (PRD §42) — quem decide
+
+| Tema | Responsável | Tratamento nesta fase |
+|---|---|---|
+| Cloud/hospedagem (§42.5) | Tecnologia + Negócio | Requisitos agnósticos (`deployment-requirements.md`); sem IaC de provedor |
+| Antivírus definitivo (§42.12) | Segurança da Informação | ClamAV como padrão open source; interface para serviço gerenciado |
+| Política de retenção e descarte (§42.8) | Jurídico/DPO | Job em dry-run; execução real bloqueada até aprovação registrada |
+| Obrigatoriedade de 2FA (§42.7) | Negócio + Segurança | Política por perfil configurável; padrão opcional; recomendação Admin + Gestor |
+| Domínio (§42.2) | Negócio | Configurável por env; HSTS preload só após domínio definitivo |
+| Base legal / aviso de privacidade (§22.2) | Jurídico/DPO | Material de apoio em `docs/privacy/` |
+
+## 7. Plano proposto — aguarda aprovação antes de alterar código
+
+**Ordem de execução.** Primeiro, corrigir os achados altos: (1) endurecer o 2FA e cobrir todas as rotas por teste de autorização (Etapa 1); (2) bloquear anexos ainda não verificados e integrar ClamAV/quarentena (Etapa 3); (3) implantar CI de segurança (Etapa 2); (4) implementar retenção com dry-run e legal hold, deixando a execução real travada até aprovação formal do Jurídico/DPO (Etapa 4); (5) versionar/rotacionar chaves e documentar criptografia em repouso (Etapa 5); (6) definir e testar restauração de backup com dados sintéticos (parte da Etapa 8). Depois, concluir os itens médios/baixos das Etapas 1 e 6–11. Qualquer achado não corrigido irá ao backlog com severidade, responsável e justificativa; não haverá aceitação tácita.
+
+**Etapa 1.** Checklist ASVS 5.0.0 L2 com evidência e estado por requisito aplicável; teste que enumera as rotas efetivamente registradas no Nest e confronta cada uma com uma allowlist pública, guard global de autenticação, permissão e regra de escopo (rotas sem recurso de loja terão exceção explícita justificada); matriz perfil × rota × escopo gerada ou verificada por teste. Revisar CSRF em todas as mutações, inclusive o GET com efeito colateral (G-23), headers da API/web/storage, CSP com nonce sem `unsafe-inline`/`unsafe-eval` em produção, Cache-Control, limites de rate limiting, upload/PDF, sessão e revogação. Corrigir o reset do contador após senha antes do TOTP e limitar tentativas por conta, além da sessão. Testar esses controles sem dados reais.
+
+**Etapa 3, seguida da 2.** Scanner ClamAV em container separado, assinaturas atualizadas e health check, interface para serviço gerenciado futuro, quarentena isolada, bloqueio de URL, auditoria, alerta e indicação discreta no Admin; comando de re-scan. Testar EICAR, indisponibilidade e atraso. Em seguida, CI com lint, typecheck, unitários, integração, e2e, SCA, SAST, gitleaks no histórico, scan de imagens, SBOM e ZAP baseline preparado e desabilitado até existir staging; documentar triagem de falsos positivos.
+
+**Proposta para `NOT_SCANNED` (requer sua aprovação e atualização do PRD antes de mudar a regra):** bloquear visualização e download de arquivos `PENDING`, `NOT_SCANNED` ou com scanner indisponível até resultado `CLEAN`; alertar após 2 minutos em fila e escalar após 5 minutos. O arquivo infectado permanece bloqueado em quarentena. Esses tempos são proposta operacional, sujeitos a ajuste por Segurança/Operações.
+
+**Etapas 4 e 5.** Retenção: relatório como padrão, legal hold auditado, remoção testada com dados sintéticos de originais, derivados, quarentena e identificadores pessoais, reconciliação de objetos órfãos e registro de quantidade/IDs sem PII; flag de execução real bloqueada até decisão formal de Jurídico/DPO, incluindo política de versões e backups. Criptografia: versão da chave no payload (distinta da versão do formato), leitura de versões antigas durante rotação, comando reentrante de recriptografia, estratégia para recálculo de HMAC/pepper, adapter de segredos e checklist de repouso para banco/storage/backups.
+
+**Etapas 6–11.** Política de 2FA por perfil com padrão opcional; OpenTelemetry/OTLP, métricas, alertas, dashboards, health de API/worker e testes de redação de PII em todos os destinos; k6/Lighthouse e resiliência; imagens finais e configuração validada, ambientes e gerador sintético; Playwright Chromium/Firefox/WebKit, axe e checklists manuais; modelo de ameaças, escopo de pentest, inventário de dados, runbooks e checklist de go-live. Avaliar com Segurança o risco residual do token na URL (G-24); alterar o formato do link somente se aprovado e atualizado no PRD. Produção depende ainda de aprovação interna de Segurança, pentest, Jurídico/DPO, operação de backups e revisão da Marca.
+
+**Premissas para propor metas de carga (a validar com Operações):** cenário ilustrativo de 200 lojas × 20 receitas/dia = 4.000 envios/dia; pico de 10× a média ≈ 28 envios/minuto. Propõe-se testar pelo menos 60 envios/minuto e 600 conexões SSE simultâneas, mais fila e dashboard. Metas de latência e orçamento Lighthouse serão registradas com condições de rede e tamanho de arquivo antes da execução, pois o PRD não fixa números.
+
+**Governança por etapa.** Cada etapa terá mudanças pequenas, `pnpm lint`, `pnpm typecheck`, `pnpm test` e `pnpm test:e2e` verdes, evidências documentadas e commit Conventional Commits. Se algum teste depender de infraestrutura indisponível, registrar o bloqueio e não declarar a etapa concluída. Nenhuma alteração de regra de negócio ocorrerá sem aprovação e atualização do PRD. As escolhas de cloud, antivírus definitivo, retenção, 2FA obrigatório e domínio permanecem com os responsáveis da tabela acima.
+
+## 8. Progresso após aprovação — Etapa 1a
+
+- **SR-02 (Alta): corrigido.** Falhas de 2FA persistem entre novos logins por senha; contador só zera após autenticação completa. Regeneração de códigos de recuperação também tem limite por sessão e conta. Evidência: `auth.service.ts`, `totp.service.ts`, `totp.e2e-spec.ts`.
+- **G-07: corrigido para cobertura de rotas.** `ScopeGuard` global exige política `SELF`, `STORE` ou `GLOBAL` em toda rota autenticada; o teste enumera 58 rotas NestJS, exige allowlist pública exata e compara a matriz de autorização gerada. O filtro por loja permanece na consulta. Evidência: `scope.guard.ts`, `authz-coverage.e2e-spec.ts`, `authz-matrix.md`.
+- **G-23/SR-12 (Média): corrigido.** `GET /prescriptions/{id}` é leitura pura; `POST /prescriptions/{id}/open` registra a abertura sob CSRF. PRD §26.3 atualizado. Evidência: `prescriptions-detail.e2e-spec.ts`.
+- **G-08: parcial.** CSP de produção sem `unsafe-inline`/`unsafe-eval`, HSTS com preload na API e no web, headers de storage no Caddy de exemplo, PDF em iframe sandbox. Falta validar a configuração real da borda e o domínio definitivo.
+- **Verificação:** lint, typecheck, unitários, 222 testes e2e da API e 35 testes Playwright passaram. O checklist ASVS requisito por requisito e as demais revisões da Etapa 1 continuam abertos.

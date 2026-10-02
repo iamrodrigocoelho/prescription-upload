@@ -149,6 +149,33 @@ describe('2FA TOTP (e2e)', () => {
     ).toBeGreaterThanOrEqual(5);
   });
 
+  it('mantém o bloqueio por conta entre novos logins de senha após falhas TOTP', async () => {
+    const { user } = await createUser(ctx.prisma, crypto, { withTotp: true });
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const client = new Client(ctx.app);
+      await client.login(user.email).then((response) => expect(response.status).toBe(200));
+      await client.post('/auth/totp/verify', { code: '000000' }).expect(401);
+    }
+    const locked = await ctx.prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(locked.failedLoginCount).toBe(5);
+    expect(locked.lockedUntil?.getTime()).toBeGreaterThan(Date.now());
+    await new Client(ctx.app).login(user.email).then((response) => expect(response.status).toBe(401));
+  });
+
+  it('limita a regeneração de códigos de recuperação por sessão', async () => {
+    const { user, totpSecret } = await createUser(ctx.prisma, crypto, { withTotp: true });
+    const client = new Client(ctx.app);
+    await client.login(user.email);
+    client.adopt(
+      await client.post('/auth/totp/verify', { code: await currentCode(totpSecret ?? '') }),
+    );
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await client.post('/auth/totp/recovery-codes', { code: '000000' }).expect(401);
+    }
+    const blocked = await client.post('/auth/totp/recovery-codes', { code: '000000' });
+    expect([401, 429]).toContain(blocked.status);
+  });
+
   it('obriga a configuração quando o Admin exige 2FA', async () => {
     const { user } = await createUser(ctx.prisma, crypto, { totpRequired: true });
     const client = new Client(ctx.app);

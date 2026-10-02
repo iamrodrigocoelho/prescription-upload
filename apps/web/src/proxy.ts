@@ -45,10 +45,10 @@ export function proxy(request: NextRequest) {
         : "frame-src 'none'",
     // Estilos inline de atributo são usados por primitivos Radix (posicionamento).
     isDev ? "style-src 'self' 'unsafe-inline'" : `style-src-elem 'self' 'nonce-${nonce}'`,
-    "style-src-attr 'unsafe-inline'",
+    "style-src-attr 'none'",
     `img-src 'self' data: blob:${storageSrc}`,
     "font-src 'self'",
-    "connect-src 'self'",
+    `connect-src 'self'${isPublicSubmission ? ' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/' : ''}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -61,6 +61,7 @@ export function proxy(request: NextRequest) {
   requestHeaders.set('Content-Security-Policy', csp);
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set('Content-Security-Policy', csp);
+  response.headers.set('Cache-Control', 'no-store');
   return response;
 }
 

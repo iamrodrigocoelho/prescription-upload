@@ -25,7 +25,7 @@ import {
   type UpdateStoreInput,
   updateStoreSchema,
 } from '@receita/shared';
-import { CurrentAuth, RequirePermissions } from '../../common/auth/decorators.js';
+import { CurrentAuth, RequirePermissions, RouteScope } from '../../common/auth/decorators.js';
 import type { AuthContext } from '../../common/auth/auth.types.js';
 import { AppError } from '../../common/errors.js';
 import { UuidParamPipe } from '../../common/pipes/uuid-param.pipe.js';
@@ -48,6 +48,7 @@ const CSV_MIME_TYPES = new Set([
 ]);
 
 @Controller('admin/stores')
+@RouteScope('STORE')
 export class StoresController {
   constructor(private readonly stores: StoresService) {}
 

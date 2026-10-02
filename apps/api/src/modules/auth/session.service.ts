@@ -25,6 +25,7 @@ export type RevokeReason =
   | 'admin_revoked'
   | 'user_deactivated'
   | 'mfa_enabled'
+  | 'mfa_disabled'
   | 'mfa_attempts_exceeded';
 
 /**

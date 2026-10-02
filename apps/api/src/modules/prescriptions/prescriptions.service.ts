@@ -73,24 +73,9 @@ export class PrescriptionsService {
     return submission as Prisma.PrescriptionSubmissionGetPayload<{ include: T }>;
   }
 
-  /**
-   * Detalhe (PRD §13). Toda abertura é auditada; a primeira visualização é
-   * registrada de forma atômica (update condicional) e gera evento de tempo real.
-   */
-  async detail(auth: AuthContext, id: string): Promise<PrescriptionDetail> {
-    const submission = await this.findScoped(auth, id, {
-      store: { select: { id: true, storeNumber: true, storeName: true } },
-      files: { orderBy: [{ position: 'asc' }, { id: 'asc' }] },
-      statusHistory: {
-        orderBy: { createdAt: 'asc' },
-        include: { changedBy: { select: { name: true } } },
-      },
-      patientLinkHistory: {
-        orderBy: { createdAt: 'asc' },
-        include: { linkedBy: { select: { name: true } } },
-      },
-    });
-
+  /** Abertura explícita: mutação protegida por CSRF, com primeira vista atômica. */
+  async open(auth: AuthContext, id: string): Promise<PrescriptionDetail> {
+    const scoped = await this.findScoped(auth, id, { store: { select: { id: true } } });
     const now = new Date();
     await this.prisma.$transaction(async (tx) => {
       const first = await tx.prescriptionSubmission.updateMany({
@@ -103,13 +88,13 @@ export class PrescriptionsService {
             action: AuditAction.PRESCRIPTION_FIRST_VIEWED,
             entityType: 'PrescriptionSubmission',
             entityId: id,
-            storeId: submission.storeId,
+            storeId: scoped.storeId,
           },
           tx,
         );
         await this.outbox.add(tx, 'prescription.viewed', {
           submissionId: id,
-          storeId: submission.storeId,
+          storeId: scoped.storeId,
         });
       }
       await this.audit.record(
@@ -117,10 +102,27 @@ export class PrescriptionsService {
           action: AuditAction.PRESCRIPTION_OPENED,
           entityType: 'PrescriptionSubmission',
           entityId: id,
-          storeId: submission.storeId,
+          storeId: scoped.storeId,
         },
         tx,
       );
+    });
+    return this.detail(auth, id);
+  }
+
+  /** Leitura pura do detalhe (PRD §13); GET não altera estado. */
+  async detail(auth: AuthContext, id: string): Promise<PrescriptionDetail> {
+    const submission = await this.findScoped(auth, id, {
+      store: { select: { id: true, storeNumber: true, storeName: true } },
+      files: { orderBy: [{ position: 'asc' }, { id: 'asc' }] },
+      statusHistory: {
+        orderBy: { createdAt: 'asc' },
+        include: { changedBy: { select: { name: true } } },
+      },
+      patientLinkHistory: {
+        orderBy: { createdAt: 'asc' },
+        include: { linkedBy: { select: { name: true } } },
+      },
     });
 
     const fileIds = submission.files.map((file) => file.id);

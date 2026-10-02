@@ -11,7 +11,7 @@ import {
   totpVerifySchema,
 } from '@receita/shared';
 import type { Request, Response } from 'express';
-import { AllowSessionStates, CurrentAuth } from '../../common/auth/decorators.js';
+import { AllowSessionStates, CurrentAuth, RouteScope } from '../../common/auth/decorators.js';
 import type { AuthContext } from '../../common/auth/auth.types.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { ENV } from '../../config/config.module.js';
@@ -22,6 +22,7 @@ import { setSessionCookie } from './session-cookie.js';
 import { TotpService } from './totp.service.js';
 
 @Controller('auth/totp')
+@RouteScope('SELF')
 export class TotpController {
   constructor(
     private readonly totp: TotpService,

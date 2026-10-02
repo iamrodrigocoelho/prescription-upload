@@ -5,11 +5,12 @@ import {
   type UpdateSystemSettingsInput,
   updateSystemSettingsSchema,
 } from '@receita/shared';
-import { RequirePermissions } from '../../common/auth/decorators.js';
+import { RequirePermissions, RouteScope } from '../../common/auth/decorators.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { SettingsService } from './settings.service.js';
 
 @Controller('admin/settings')
+@RouteScope('GLOBAL')
 @RequirePermissions(Permission.SETTINGS_MANAGE)
 export class SettingsController {
   constructor(private readonly settings: SettingsService) {}

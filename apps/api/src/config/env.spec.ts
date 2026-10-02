@@ -42,6 +42,7 @@ describe('parseEnv', () => {
       ...process.env,
       PATIENT_INTEGRATION_ENABLED: undefined,
       PATIENT_PROVIDER: undefined,
+      PATIENT_AUTO_IDENTIFICATION_ENABLED: undefined,
     };
     const env = parseEnv(base);
     expect(env.PATIENT_INTEGRATION_ENABLED).toBe(false);

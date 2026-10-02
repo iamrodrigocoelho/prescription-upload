@@ -1,12 +1,13 @@
 import { Body, Controller, Get, Patch } from '@nestjs/common';
 import { type UserPreferences, userPreferencesSchema } from '@receita/shared';
-import { CurrentAuth } from '../../common/auth/decorators.js';
+import { CurrentAuth, RouteScope } from '../../common/auth/decorators.js';
 import type { AuthContext } from '../../common/auth/auth.types.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { PrismaService } from '../../infra/prisma/prisma.service.js';
 
 /** Preferências do próprio usuário (som de alerta — PRD §19.2). */
 @Controller('me/preferences')
+@RouteScope('SELF')
 export class PreferencesController {
   constructor(private readonly prisma: PrismaService) {}
 

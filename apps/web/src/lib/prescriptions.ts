@@ -75,7 +75,7 @@ export function useUnviewedBadge(enabled: boolean) {
 export function usePrescription(id: string) {
   return useQuery({
     queryKey: ['prescriptions', 'detail', id],
-    queryFn: () => api<PrescriptionDetail>(`/prescriptions/${id}`),
+    queryFn: () => api<PrescriptionDetail>(`/prescriptions/${id}/open`, { method: 'POST' }),
     retry: false,
   });
 }
