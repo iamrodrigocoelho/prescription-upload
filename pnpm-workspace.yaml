@@ -9,6 +9,7 @@ trustPolicy: no-downgrade
 # O lockfile atual foi auditado antes de ativar a janela de 7 dias. Novas
 # resoluções seguem a política; PRs com lockfile alterado exigem revisão.
 trustLockfile: true
+injectWorkspacePackages: true
 
 # Prisma 7.10 fixa versões anteriores às correções de GHSA-ggr8-5vv4-36mx,
 # GHSA-3f6p-5ww8-9rcr e GHSA-rgwj-5xj2-c3m3. Remover após correção upstream.

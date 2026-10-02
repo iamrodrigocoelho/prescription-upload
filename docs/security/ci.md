@@ -13,6 +13,10 @@ anteriores à nova política. Mudanças no lockfile exigem revisão de dependên
 e do resultado dos scans no PR. Este aceite transitório não substitui a revisão
 de Segurança antes de produção.
 
+O build da API usa `pnpm deploy` com lockfile dedicado e dependências de
+produção, depois copia o `dist` compilado. O modo legado re-resolvia versões,
+incluindo o CLI Prisma, e contrariava o snapshot auditado; foi removido.
+
 | Job             | Bloqueio                                                                     | Evidência                                        |
 | --------------- | ---------------------------------------------------------------------------- | ------------------------------------------------ |
 | quality-and-e2e | Lint, tipos, testes, E2E da API e navegador, `pnpm audit --audit-level high` | Log do job; inclui EICAR com ClamAV real         |

@@ -10,7 +10,7 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @receita/api db:generate
 RUN pnpm --filter @receita/api... build
-RUN pnpm --filter @receita/api deploy --prod --legacy /out \
+RUN pnpm --filter @receita/api --prod deploy /out \
   && cp -r apps/api/dist /out/dist \
   && cp -r apps/api/prisma /out/prisma \
   && cp apps/api/prisma.config.ts /out/
