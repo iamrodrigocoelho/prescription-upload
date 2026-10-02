@@ -59,6 +59,16 @@ export const jpeg = (name = 'receita.jpg', size = 4096) => {
   return { name, mimeType: 'image/jpeg', buffer };
 };
 
+/** JPEG válido e decodificável (96×64, gerado para o projeto) — usado pelo visualizador. */
+const REAL_JPEG_BASE64 =
+  '/9j/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCABAAGADASIAAhEBAxEB/8QAGAABAAMBAAAAAAAAAAAAAAAAAAUHCAb/xAAvEAABAgQDBwALAAAAAAAAAAAAF6QDBlXSARITAgQFERRl4hUWISMkMTJDUWKh/8QAFwEBAQEBAAAAAAAAAAAAAAAAAAECA//EABsRAQEBAQEBAQEAAAAAAAAAAAABERJhgSFB/9oADAMBAAIRAxEAPwC/ADBh1k1ztxvMGDAXlOm8wYMA5Om8wYMA5Om8wYMA5Om8wYMN5ksxZdDgkikeiO4953pVKvdkd+BJL/CplIpHojuPeEikeiO495DK92R34BXuyO/AuVNiZSKR6I7j3hIpHojuPeQyvdkd+AV7sjvwGU2JlIpHojuPeEikeiO495DK92R34BXuyO/AZTYmUikeiO494SKR6I7j3klIs3+tXXfA9J02T7upmzZv1w5csv8ATqyfsX8cEkUj0R3HvO9AAHKJ7K9McRbjqzPyezRTHEK4sKtZPZXpjiLcE9lemOItxVKezRTHEK4J7NFMcQri56nxayeyvTHEW4J7K9McRbiqU9mimOIVwT2aKY4hXDPT4tZPZXpjiLcE9lemOItxVKezRTHEK4J7NFMcQrhnp8XZwKXuF8B1/RO69Pr5dT3m1t5svPl9WOP5xJUz8ns0UxxCuOgkGTePcKm3cN93/cNLdoWpn29aHtcucPaww9mG1jj88cCWemrhABloAAAAAAAAAAAAAAAB/9k=';
+
+export const realJpeg = (name = 'foto.jpg') => ({
+  name,
+  mimeType: 'image/jpeg',
+  buffer: Buffer.from(REAL_JPEG_BASE64, 'base64'),
+});
+
 export const pdf = (name = 'receita.pdf') => {
   const buffer = Buffer.alloc(4096, 0x20);
   Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\n').copy(buffer);
@@ -81,3 +91,83 @@ export async function solveCaptcha(page: Page) {
 
 export const submitButton = (page: Page) =>
   page.getByRole('button', { name: /^(Enviar|Tentar novamente)$/ });
+
+/** Autentica o contexto do navegador via API (compartilha os cookies com as páginas). */
+export async function loginPage(page: Page, email: string, password: string): Promise<void> {
+  const res = await page.request.post('/api/auth/login', {
+    headers: { Origin: ORIGIN },
+    data: { email, password },
+  });
+  expect(res.ok()).toBe(true);
+}
+
+export const demoCollaborator = () => ({
+  email: 'colaborador@receita.local',
+  password: process.env.SEED_DEMO_PASSWORD ?? '',
+});
+export const demoManager = () => ({
+  email: 'gestor@receita.local',
+  password: process.env.SEED_DEMO_PASSWORD ?? '',
+});
+
+let captchaSeq = 0;
+/** Envio público via API (chave de teste do reCAPTCHA aprova qualquer token). */
+export async function submitPrescription(
+  slug: string,
+  files: { name: string; mimeType: string; buffer: Buffer }[] = [jpeg()],
+): Promise<void> {
+  const api = await request.newContext({ baseURL: ORIGIN, extraHTTPHeaders: { Origin: ORIGIN } });
+  captchaSeq += 1;
+  const multipart: Record<string, string | { name: string; mimeType: string; buffer: Buffer }> = {
+    captchaToken: `e2e-${Date.now()}-${captchaSeq}-token-xxxxxxxxxxxx`,
+    slug,
+  };
+  // Playwright aceita um arquivo por chave; para vários, envia-se como lista no FormData.
+  const form = new FormData();
+  for (const [key, value] of Object.entries(multipart)) form.append(key, value as string);
+  for (const file of files)
+    form.append(
+      'files',
+      new Blob([new Uint8Array(file.buffer)], { type: file.mimeType }),
+      file.name,
+    );
+  const res = await api.post('/api/public/prescriptions', { multipart: form });
+  expect(res.status()).toBe(201);
+  await api.dispose();
+}
+
+/** Substitui o AudioContext por um contador (o áudio real não é verificável no headless). */
+export async function mockAudio(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __sounds: number };
+    w.__sounds = 0;
+    class FakeContext {
+      state = 'running';
+      currentTime = 0;
+      destination = {};
+      resume() {
+        return Promise.resolve();
+      }
+      createGain() {
+        w.__sounds += 1;
+        return {
+          connect() {},
+          gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} },
+        };
+      }
+      createOscillator() {
+        return {
+          type: 'sine',
+          frequency: { setValueAtTime() {} },
+          connect() {},
+          start() {},
+          stop() {},
+        };
+      }
+    }
+    (window as unknown as { AudioContext: unknown }).AudioContext = FakeContext;
+  });
+}
+
+export const soundCount = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __sounds: number }).__sounds);

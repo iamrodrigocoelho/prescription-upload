@@ -65,7 +65,7 @@ http://localhost:8025.
 
 | Comando                  | Descrição                                                            |
 | ------------------------ | -------------------------------------------------------------------- |
-| `pnpm dev`               | Sobe web e API em modo watch                                         |
+| `pnpm dev`               | Sobe web, API e worker em modo watch                                 |
 | `pnpm build`             | Build de todos os pacotes                                            |
 | `pnpm lint`              | ESLint em todo o monorepo                                            |
 | `pnpm typecheck`         | Verificação de tipos (strict)                                        |
@@ -77,6 +77,40 @@ http://localhost:8025.
 | `pnpm db:seed`           | Popula dados de desenvolvimento                                      |
 | `pnpm db:reset`          | Recria o banco de desenvolvimento do zero                            |
 | `pnpm format`            | Prettier                                                             |
+
+## Worker (processamento assíncrono)
+
+O worker entrega os eventos do outbox (fila de anexos e tempo real) e processa os anexos
+(antivírus no-op → `NOT_SCANNED`, JPEG de visualização para HEIC/HEIF e miniaturas).
+
+```bash
+pnpm dev                                  # já inclui o worker (dev:worker)
+pnpm --filter @receita/api worker         # produção: node dist/worker.js (mesma imagem da API)
+```
+
+Sem o worker, as receitas continuam sendo recebidas e listadas, mas não há notificações em
+tempo real nem miniaturas/pré-visualização de HEIC. Ao subir, ele reconcilia anexos pendentes.
+
+## Tempo real (SSE)
+
+A fila do Admin recebe eventos por **Server-Sent Events** em `GET /api/realtime/stream`
+(autenticado pelo cookie de sessão). Proxies **não podem fazer buffering** do stream:
+
+- **Caddy:** `reverse_proxy api:4000 { flush_interval -1 }` no bloco de `/api/*`.
+- **Nginx:** `proxy_buffering off; proxy_cache off; proxy_read_timeout 1h;` e `proxy_http_version 1.1`.
+- **CDN/WAF:** desabilite buffering/compressão para `text/event-stream` nessa rota.
+- O rewrite do Next.js (desenvolvimento) já entrega sem buffering.
+
+A API envia `X-Accel-Buffering: no`, heartbeat a cada `REALTIME_HEARTBEAT_SECONDS` e suporta
+`Last-Event-ID`. Variáveis: `REALTIME_HEARTBEAT_SECONDS`, `REALTIME_REVALIDATE_SECONDS`,
+`REALTIME_MAX_STREAMS_PER_USER`.
+
+### Anexos no Admin
+
+As URLs assinadas (`SIGNED_URL_TTL_SECONDS`, padrão 60 s) apontam para
+`STORAGE_PUBLIC_ENDPOINT` — em produção, um subdomínio servido pelo proxy de borda
+preservando o `Host` (veja `infra/caddy/Caddyfile.example`). A CSP do Admin libera imagens e
+o PDF apenas dessa origem. `CPF_REVEAL_RATE_LIMIT_PER_HOUR` limita a revelação de CPF.
 
 ## Área pública (envio de receitas)
 

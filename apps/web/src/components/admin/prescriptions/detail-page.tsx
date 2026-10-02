@@ -4,7 +4,7 @@ import { SOURCE_CHANNEL_LABELS, type RealtimeEvent } from '@receita/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { Download, Eye } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, PageHeader } from '@/components/ui/card';
@@ -39,6 +39,18 @@ export function DetailPage({ id }: { id: string }) {
   const client = useQueryClient();
   const notify = useToast();
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  // Devolve o foco ao botão que abriu o visualizador (WCAG 2.4.3).
+  const returnFocus = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    // Após o commit que desmonta o visualizador (fora da armadilha de foco do diálogo).
+    if (viewerIndex === null && returnFocus.current) {
+      const target = returnFocus.current;
+      returnFocus.current = null;
+      // Próximo ciclo: o diálogo libera o restante da página (inert/aria-hidden) na limpeza.
+      const timer = setTimeout(() => target.focus(), 0);
+      return () => clearTimeout(timer);
+    }
+  }, [viewerIndex]);
 
   useEffect(() => {
     if (detail.data) track('prescription_opened', {});
@@ -156,7 +168,10 @@ export function DetailPage({ id }: { id: string }) {
                       variant="secondary"
                       size="sm"
                       disabled={!file.accessible}
-                      onClick={() => setViewerIndex(index)}
+                      onClick={(event) => {
+                        returnFocus.current = event.currentTarget;
+                        setViewerIndex(index);
+                      }}
                     >
                       <Eye className="size-4" aria-hidden />
                       Visualizar

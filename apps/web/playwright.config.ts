@@ -42,9 +42,15 @@ export default defineConfig({
     locale: 'pt-BR',
   },
   projects: [
-    { name: 'mobile-320', use: { ...devices['Pixel 5'], viewport: { width: 320, height: 640 } } },
+    // Admin: contexto desktop (DESIGN §5.3); telas públicas em todos os tamanhos.
+    {
+      name: 'mobile-320',
+      testIgnore: /admin-.*\.spec\.ts/,
+      use: { ...devices['Pixel 5'], viewport: { width: 320, height: 640 } },
+    },
     {
       name: 'mobile-375',
+      testIgnore: /admin-.*\.spec\.ts/,
       use: {
         ...devices['iPhone 13'],
         browserName: 'chromium',
@@ -62,6 +68,20 @@ export default defineConfig({
       cwd: resolve(import.meta.dirname, '../api'),
       url: 'http://localhost:4000/health',
       env: { ...process.env, ...e2eEnv } as Record<string, string>,
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
+      // Worker: outbox → tempo real e fila de anexos (necessário para CA-006).
+      command: 'node dist/worker.js',
+      cwd: resolve(import.meta.dirname, '../api'),
+      wait: { stdout: /Worker iniciado/ },
+      env: {
+        ...process.env,
+        ...e2eEnv,
+        LOG_LEVEL: 'info',
+        OUTBOX_POLL_INTERVAL_MS: '200',
+      } as Record<string, string>,
       reuseExistingServer: false,
       timeout: 60_000,
     },

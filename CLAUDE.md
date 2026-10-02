@@ -48,8 +48,7 @@ Não avance de etapa com testes quebrados.
 - API: `modules/public` (contexto de loja/link e contexto do link em cookie),
   `modules/submissions` (receptor multipart em streaming, `FileValidator` por magic bytes,
   idempotência, limpeza de órfãos), `modules/captcha` (`CaptchaVerifier` → reCAPTCHA v2),
-  `modules/malware` (`MalwareScanner` no-op), `infra/metrics` (Prometheus) e
-  `common/events` (`DomainEventBus`: `prescription.submitted`).
+  `modules/malware` (`MalwareScanner`, usado pelo worker) e `infra/metrics` (Prometheus).
 - Envio multipart: **campos de texto antes dos arquivos** (captcha/loja/link validados antes
   de gravar qualquer byte). Link personalizado aceita só `captchaToken`.
 - Link personalizado: reivindique o link ANTES de criar a receita na transação
@@ -61,6 +60,29 @@ Não avance de etapa com testes quebrados.
 - CSP: Google (reCAPTCHA) liberado apenas em `/l`, `/p` e `/enviar` (`src/proxy.ts`).
 - E2E do web: `apps/web/e2e` (Playwright, viewports 320/375/desktop, axe). Rode com
   `pnpm test:e2e:web` (portas 3000/4000 livres; banco `*_test`).
+
+## Fase 3 — operação da loja (módulos e convenções)
+
+- API: `modules/prescriptions` (fila com cursor, detalhe, status, URLs de anexos, CPF),
+  `modules/outbox` (`OutboxService.add(tx, …)` + `OutboxDispatcher`), `modules/attachments`
+  (BullMQ, derivados HEIC/JPEG, `WorkerRunner`), `modules/realtime` (SSE: `RealtimeHub`,
+  `RealtimePublisher` em Redis Stream, `RealtimeControl` para encerrar streams).
+- **Processo worker** separado: `src/worker.ts` / `worker.module.ts` (`node dist/worker.js`).
+- Eventos de domínio: SEMPRE via `outboxService.add(tx, …)` dentro da transação da ação —
+  nunca emitir direto. Payloads só com IDs e campos não sensíveis.
+- Qualquer revogação/desativação/mudança de escopo deve chamar `RealtimeControl`
+  (`invalidateSession`/`invalidateUser`) para fechar streams SSE.
+- Receita fora do escopo = 404 (`PrescriptionsService.findScoped`). Arquivo só via
+  `PrescriptionFilesService.signedUrl` (checa escopo + vínculo arquivo↔receita + INFECTED).
+- Matriz de status em `packages/shared/src/status-matrix.ts` (frontend e backend).
+- Ordem dos anexos: `prescription_files.position` (não ordenar por `created_at`).
+- Web: `lib/realtime.tsx` (`RealtimeProvider`/`useRealtime`), `lib/prescriptions.ts`
+  (filtros na URL), `components/admin/prescriptions/*`, `components/admin/notification-center.tsx`,
+  `lib/sound-gate.ts` (som em uma aba). CSP do Admin libera só a origem do storage.
+- E2E do Admin: `apps/web/e2e/admin-operations.spec.ts` (desktop; sobe API, worker e web).
+- Migrations: `prisma migrate dev` é interativo; neste ambiente gere com
+  `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script`,
+  confira que o arquivo não está vazio e aplique com `migrate deploy`.
 
 ## Convenções de código
 

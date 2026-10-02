@@ -121,6 +121,8 @@ export function FileViewer({
         <Dialog.Overlay className="fixed inset-0 z-40 bg-content/80" />
         <Dialog.Content
           onKeyDown={onKeyDown}
+          // O foco é devolvido explicitamente por quem abriu (não há Dialog.Trigger).
+          onCloseAutoFocus={(event) => event.preventDefault()}
           className="fixed inset-2 z-50 flex flex-col overflow-hidden rounded-modal bg-surface shadow-overlay sm:inset-6"
           aria-describedby="viewer-help"
         >
