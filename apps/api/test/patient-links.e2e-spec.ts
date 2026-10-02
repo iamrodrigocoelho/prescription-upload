@@ -262,6 +262,7 @@ describe('Links personalizados (e2e)', () => {
         storeName: storeA.storeName,
         patientExternalId: JOAO.externalId,
         patientDisplayLabel: `João T. · CPF ***.***.***-${JOAO.cpf.slice(-2)}`,
+        patientLabelCapturedAt: expect.any(Date),
       });
     });
 

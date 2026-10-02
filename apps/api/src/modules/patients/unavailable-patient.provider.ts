@@ -1,32 +1,25 @@
 import { Injectable } from '@nestjs/common';
-import { ApiErrorCode } from '@receita/shared';
-import { AppError } from '../../common/errors.js';
-import { type Patient, PatientProvider } from './patient.provider.js';
+import { PatientProvider, PatientProviderError, type PatientSummary } from './patient.provider.js';
 
 const unavailable = (): Promise<never> =>
-  Promise.reject(
-    new AppError(
-      ApiErrorCode.SERVICE_UNAVAILABLE,
-      'A consulta de pacientes está temporariamente indisponível.',
-    ),
-  );
+  Promise.reject(new PatientProviderError('unavailable', 'Integração de pacientes desligada.'));
 
-/** Usado enquanto a API real não existe (PATIENT_PROVIDER=none): indisponibilidade explícita (PRD §33). */
+/**
+ * Integração desligada (PATIENT_INTEGRATION_ENABLED=false): toda chamada informa
+ * indisponibilidade (PRD §33) e nada mais quebra.
+ */
 @Injectable()
 export class UnavailablePatientProvider extends PatientProvider {
-  findByCpf(): Promise<Patient | null> {
+  searchByCpf(): Promise<PatientSummary[]> {
     return unavailable();
   }
-  searchByCpf(): Promise<Patient[]> {
+  searchByPhone(): Promise<PatientSummary[]> {
     return unavailable();
   }
-  searchByPhone(): Promise<Patient[]> {
+  searchByEmail(): Promise<PatientSummary[]> {
     return unavailable();
   }
-  searchByEmail(): Promise<Patient[]> {
-    return unavailable();
-  }
-  findByExternalId(): Promise<Patient | null> {
+  findByExternalId(): Promise<PatientSummary | null> {
     return unavailable();
   }
 }

@@ -20,6 +20,7 @@ export const e2eEnv: Record<string, string> = {
   COOKIE_SECURE: 'false',
   LOG_LEVEL: 'warn',
   LOG_PRETTY: 'false',
+  PATIENT_INTEGRATION_ENABLED: 'true',
   PATIENT_PROVIDER: 'mock',
   PUBLIC_SUBMIT_RATE_LIMIT_POINTS: '10000',
   PUBLIC_LOOKUP_RATE_LIMIT_POINTS: '10000',

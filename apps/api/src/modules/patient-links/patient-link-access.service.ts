@@ -15,6 +15,8 @@ export interface ResolvedPatientLink {
   patientExternalId: string;
   /** Rótulo já mascarado do paciente (D-010), copiado para a receita (Fase 3, item C). */
   patientDisplayLabel: string;
+  /** Quando o rótulo foi capturado da API de pacientes (criação do link). */
+  patientLabelCapturedAt: Date;
 }
 
 export type ConsumeResult = 'consumed' | 'already_consumed';
@@ -69,6 +71,7 @@ export class PatientLinkAccessService {
       storeName: link.store.storeName,
       patientExternalId: link.patientExternalId,
       patientDisplayLabel: link.patientDisplayLabel,
+      patientLabelCapturedAt: link.createdAt,
     };
   }
 

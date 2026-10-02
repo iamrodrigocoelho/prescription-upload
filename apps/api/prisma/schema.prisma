@@ -271,27 +271,29 @@ model PatientUploadLink {
 // -----------------------------------------------------------------------------
 
 model PrescriptionSubmission {
-  id                   String               @id @default(uuid()) @db.Uuid
-  storeId              String               @map("store_id") @db.Uuid
+  id                     String               @id @default(uuid()) @db.Uuid
+  storeId                String               @map("store_id") @db.Uuid
   /// AES-256-GCM (chave CPF_ENCRYPTION_KEY).
-  cpfEncrypted         String?              @map("cpf_encrypted")
+  cpfEncrypted           String?              @map("cpf_encrypted")
   /// HMAC-SHA256 com pepper, para busca exata sem descriptografar.
-  cpfHashForLookup     String?              @map("cpf_hash_for_lookup") @db.Char(64)
-  operationalStatus    OperationalStatus    @default(RECEIVED) @map("operational_status")
-  identificationStatus IdentificationStatus @default(NOT_IDENTIFIED) @map("identification_status")
-  patientExternalId    String?              @map("patient_external_id") @db.VarChar(128)
-  sourceChannel        SourceChannel        @map("source_channel")
-  patientUploadLinkId  String?              @map("patient_upload_link_id") @db.Uuid
+  cpfHashForLookup       String?              @map("cpf_hash_for_lookup") @db.Char(64)
+  operationalStatus      OperationalStatus    @default(RECEIVED) @map("operational_status")
+  identificationStatus   IdentificationStatus @default(NOT_IDENTIFIED) @map("identification_status")
+  patientExternalId      String?              @map("patient_external_id") @db.VarChar(128)
+  sourceChannel          SourceChannel        @map("source_channel")
+  patientUploadLinkId    String?              @map("patient_upload_link_id") @db.Uuid
   /// Chave de idempotência do envio público (RNF-012).
-  idempotencyKey       String?              @unique @map("idempotency_key") @db.VarChar(64)
-  firstViewedAt        DateTime?            @map("first_viewed_at") @db.Timestamptz(3)
+  idempotencyKey         String?              @unique @map("idempotency_key") @db.VarChar(64)
+  firstViewedAt          DateTime?            @map("first_viewed_at") @db.Timestamptz(3)
   /// Rótulo mascarado do paciente vinculado (ex.: "João S. · CPF ***.***.***-12").
-  patientDisplayLabel  String?              @map("patient_display_label") @db.VarChar(200)
+  patientDisplayLabel    String?              @map("patient_display_label") @db.VarChar(200)
+  /// Snapshot de exibição: quando o rótulo foi capturado da API de pacientes (D-067).
+  patientLabelCapturedAt DateTime?            @map("patient_label_captured_at") @db.Timestamptz(3)
   /// Controle otimista de concorrência (PATCH /status).
-  version              Int                  @default(0)
-  retentionUntil       DateTime             @map("retention_until") @db.Timestamptz(3)
-  createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt            DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  version                Int                  @default(0)
+  retentionUntil         DateTime             @map("retention_until") @db.Timestamptz(3)
+  createdAt              DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   store              Store                @relation(fields: [storeId], references: [id], onDelete: Restrict)
   patientUploadLink  PatientUploadLink?   @relation("SubmissionPatientLink", fields: [patientUploadLinkId], references: [id], onDelete: Restrict)

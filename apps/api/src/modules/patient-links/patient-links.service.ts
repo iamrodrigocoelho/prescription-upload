@@ -21,6 +21,7 @@ import { PrismaService } from '../../infra/prisma/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { StoreScopeService } from '../auth/store-scope.service.js';
 import { patientDisplayLabel } from '../patients/patient-display.js';
+import { callProvider } from '../patients/patient-errors.js';
 import { PatientProvider } from '../patients/patient.provider.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { storeAcceptsSubmissions } from '../stores/stores.service.js';
@@ -110,7 +111,9 @@ export class PatientLinksService {
       ]);
     }
 
-    const patient = await this.patients.findByExternalId(input.patientExternalId);
+    const patient = await callProvider(() =>
+      this.patients.findByExternalId(input.patientExternalId),
+    );
     if (!patient) {
       throw new AppError(ApiErrorCode.VALIDATION_FAILED, undefined, [
         { path: 'patientExternalId', message: 'Paciente não encontrado.' },

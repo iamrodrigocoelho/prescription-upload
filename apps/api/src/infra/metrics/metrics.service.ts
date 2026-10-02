@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Counter, collectDefaultMetrics, Histogram, Registry } from 'prom-client';
+import { Counter, collectDefaultMetrics, Gauge, Histogram, Registry } from 'prom-client';
 
 /**
  * Métricas Prometheus (PRD §34). Labels nunca carregam dados pessoais, tokens ou
@@ -56,6 +56,34 @@ export class MetricsService {
     name: 'security_events_total',
     help: 'Eventos de segurança por tipo',
     labelNames: ['type'] as const,
+    registers: [this.registry],
+  });
+
+  readonly patientProviderDuration = new Histogram({
+    name: 'patient_provider_request_duration_seconds',
+    help: 'Latência das chamadas à API de pacientes por operação e desfecho',
+    labelNames: ['operation', 'outcome'] as const,
+    buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
+    registers: [this.registry],
+  });
+
+  readonly patientProviderErrors = new Counter({
+    name: 'patient_provider_errors_total',
+    help: 'Falhas da integração de pacientes por operação e tipo',
+    labelNames: ['operation', 'kind'] as const,
+    registers: [this.registry],
+  });
+
+  readonly patientProviderCircuit = new Gauge({
+    name: 'patient_provider_circuit_state',
+    help: 'Circuit breaker da API de pacientes (0 fechado, 1 aberto, 2 meio-aberto, 3 isolado)',
+    registers: [this.registry],
+  });
+
+  readonly patientAutoIdentification = new Counter({
+    name: 'patient_auto_identification_total',
+    help: 'Identificação automática por CPF por desfecho',
+    labelNames: ['outcome'] as const,
     registers: [this.registry],
   });
 

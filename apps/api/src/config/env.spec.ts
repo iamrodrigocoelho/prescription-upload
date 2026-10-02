@@ -30,9 +30,24 @@ describe('parseEnv', () => {
       parseEnv({
         ...process.env,
         NODE_ENV: 'production',
-        PATIENT_PROVIDER: 'none',
+        PATIENT_PROVIDER: 'http',
+        PATIENT_INTEGRATION_ENABLED: 'false',
         COOKIE_SECURE: 'false',
       }),
     ).toThrow(/COOKIE_SECURE/);
+  });
+
+  it('integração de pacientes: desligada por padrão; HTTP bloqueado até existir contrato', () => {
+    const base = {
+      ...process.env,
+      PATIENT_INTEGRATION_ENABLED: undefined,
+      PATIENT_PROVIDER: undefined,
+    };
+    const env = parseEnv(base);
+    expect(env.PATIENT_INTEGRATION_ENABLED).toBe(false);
+    expect(env.PATIENT_PROVIDER).toBe('http');
+    expect(() =>
+      parseEnv({ ...base, PATIENT_INTEGRATION_ENABLED: 'true', PATIENT_PROVIDER: 'http' }),
+    ).toThrow(/patients-api-checklist/);
   });
 });

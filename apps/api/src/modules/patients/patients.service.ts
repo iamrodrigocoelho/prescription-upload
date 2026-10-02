@@ -4,6 +4,7 @@ import type { AuthContext } from '../../common/auth/auth.types.js';
 import { RateLimitService } from '../../infra/rate-limit/rate-limit.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { toSearchResult } from './patient-display.js';
+import { callProvider } from './patient-errors.js';
 import { PatientProvider } from './patient.provider.js';
 
 const MAX_RESULTS = 20;
@@ -22,12 +23,13 @@ export class PatientsService {
    */
   async search(auth: AuthContext, input: PatientSearchInput): Promise<PatientSearchResult[]> {
     await this.rateLimit.consume('patientSearchUser', auth.user.id);
-    const patients =
+    const patients = await callProvider(() =>
       input.type === 'cpf'
-        ? await this.provider.searchByCpf(input.query)
+        ? this.provider.searchByCpf(input.query)
         : input.type === 'phone'
-          ? await this.provider.searchByPhone(input.query)
-          : await this.provider.searchByEmail(input.query);
+          ? this.provider.searchByPhone(input.query)
+          : this.provider.searchByEmail(input.query),
+    );
 
     await this.audit.record({
       action: AuditAction.PATIENT_SEARCH_PERFORMED,

@@ -111,8 +111,16 @@ export const envSchema = z
     OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().min(100).max(10_000).default(500),
     ATTACHMENTS_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(2),
 
-    // Pacientes
-    PATIENT_PROVIDER: z.enum(['mock', 'none']).default('none'),
+    // Pacientes (PRD §27). Desligada, a busca informa indisponibilidade.
+    PATIENT_INTEGRATION_ENABLED: bool.default(false),
+    /** `mock` (dev/testes; proibido em produção) ou `http` (aguarda contrato). */
+    PATIENT_PROVIDER: z.enum(['mock', 'http']).default('http'),
+    PATIENT_API_BASE_URL: z.preprocess((v) => (v === '' ? undefined : v), z.url().optional()),
+    PATIENT_API_TOKEN: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
+    PATIENT_API_TIMEOUT_MS: z.coerce.number().int().min(200).max(10_000).default(2_000),
+    PATIENT_API_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
+    PATIENT_API_BREAKER_THRESHOLD: z.coerce.number().int().min(1).max(50).default(5),
+    PATIENT_API_BREAKER_HALF_OPEN_MS: z.coerce.number().int().min(1_000).default(30_000),
 
     // Object storage S3-compatible (SeaweedFS)
     STORAGE_ENDPOINT: z.url(),
@@ -132,6 +140,15 @@ export const envSchema = z
     CPF_REVEAL_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(30),
   })
   .superRefine((env, ctx) => {
+    if (env.PATIENT_INTEGRATION_ENABLED && env.PATIENT_PROVIDER === 'http') {
+      // Contrato da API ainda não definido (PRD §42.4): ver docs/integrations/patients-api-checklist.md.
+      ctx.addIssue({
+        code: 'custom',
+        path: ['PATIENT_PROVIDER'],
+        message:
+          'o adapter HTTP de pacientes aguarda o contrato da API (docs/integrations/patients-api-checklist.md)',
+      });
+    }
     if (env.NODE_ENV === 'production') {
       if (env.PATIENT_PROVIDER === 'mock') {
         ctx.addIssue({

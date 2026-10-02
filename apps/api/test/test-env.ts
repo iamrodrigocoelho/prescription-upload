@@ -27,6 +27,7 @@ export function applyTestEnv(): void {
     SMTP_HOST: 'localhost',
     SMTP_PORT: '1025',
     MAIL_FROM: 'Receita Venancio <nao-responda@localhost>',
+    PATIENT_INTEGRATION_ENABLED: 'true',
     PATIENT_PROVIDER: 'mock',
     RECAPTCHA_SECRET_KEY: '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe',
     RECAPTCHA_EXPECTED_HOSTNAMES: 'localhost,testkey.google.com',

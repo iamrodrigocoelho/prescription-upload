@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { type Patient, PatientProvider } from './patient.provider.js';
+import { type RawPatient, toPatientSummary } from './patient-display.js';
+import { PatientProvider, type PatientSummary } from './patient.provider.js';
 
 /** Completa 9 dígitos com os dígitos verificadores, gerando um CPF estruturalmente válido. */
 function withCheckDigits(base: string): string {
@@ -16,7 +17,7 @@ function withCheckDigits(base: string): string {
  * Pacientes FICTÍCIOS para desenvolvimento e testes (PATIENT_PROVIDER=mock).
  * Proibido em produção (validado no boot). Nenhum dado real.
  */
-export const MOCK_PATIENTS: readonly Patient[] = [
+export const MOCK_PATIENTS: readonly RawPatient[] = [
   {
     externalId: 'mock-pat-0001',
     name: 'João da Silva Teste',
@@ -64,25 +65,24 @@ export const MOCK_PATIENTS: readonly Patient[] = [
 
 @Injectable()
 export class MockPatientProvider extends PatientProvider {
-  findByCpf(cpf: string): Promise<Patient | null> {
-    return Promise.resolve(MOCK_PATIENTS.find((p) => p.cpf === cpf) ?? null);
+  searchByCpf(cpf: string): Promise<PatientSummary[]> {
+    return Promise.resolve(summaries((p) => p.cpf === cpf));
   }
 
-  searchByCpf(cpf: string): Promise<Patient[]> {
-    return Promise.resolve(MOCK_PATIENTS.filter((p) => p.cpf === cpf));
+  searchByPhone(phone: string): Promise<PatientSummary[]> {
+    return Promise.resolve(summaries((p) => p.phone === phone));
   }
 
-  searchByPhone(phone: string): Promise<Patient[]> {
-    // Aceita com ou sem DDI 55.
-    const local = phone.replace(/^55(?=\d{10,11}$)/, '');
-    return Promise.resolve(MOCK_PATIENTS.filter((p) => p.phone === local));
+  searchByEmail(email: string): Promise<PatientSummary[]> {
+    return Promise.resolve(summaries((p) => p.email === email));
   }
 
-  searchByEmail(email: string): Promise<Patient[]> {
-    return Promise.resolve(MOCK_PATIENTS.filter((p) => p.email === email));
+  findByExternalId(externalId: string): Promise<PatientSummary | null> {
+    const found = MOCK_PATIENTS.find((p) => p.externalId === externalId);
+    return Promise.resolve(found ? toPatientSummary(found) : null);
   }
+}
 
-  findByExternalId(externalId: string): Promise<Patient | null> {
-    return Promise.resolve(MOCK_PATIENTS.find((p) => p.externalId === externalId) ?? null);
-  }
+function summaries(match: (patient: RawPatient) => boolean): PatientSummary[] {
+  return MOCK_PATIENTS.filter(match).map(toPatientSummary);
 }

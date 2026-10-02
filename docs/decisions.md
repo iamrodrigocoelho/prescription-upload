@@ -379,3 +379,26 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 
 - **Data:** 2026-10-01
 - **Decisão:** filtros refletidos na URL; "Carregar mais" (cursor); novas receitas entram no topo na primeira página (refetch + destaque); com páginas adicionais carregadas ou ordem "mais antigas", aparece o aviso "Há N novas receitas" em vez de deslocar a lista. Linha nova com borda + selo "Nova" (não só cor). Detalhe em blocos (metadados → paciente → status → arquivos → histórico); espaço reservado para "Vincular paciente" (Fase 4) sem botão inativo. Anexos sem nome original ("Arquivo N · Imagem/PDF"). Visualizador próprio: zoom (+/−), rotação (R), arraste e setas, Page Up/Down entre anexos, PDF em iframe a partir da origem do storage; CSP do Admin libera `img-src`/`frame-src` apenas para `STORAGE_PUBLIC_ENDPOINT`. Miniaturas carregadas por URL assinada (cada uma auditada, fora da timeline). SSE pelo rewrite do Next verificado sem buffering (≈50 ms).
+
+---
+
+# Fase 4 — Pacientes e dashboard
+
+## D-066 — Camada de integração de pacientes: contrato mínimo e resiliência
+
+- **Data:** 2026-10-02
+- **Contexto:** PRD §27 e §40; contrato da API real indefinido (PRD §42.4).
+- **Decisão (aprovada):** o `PatientProvider` devolve apenas `PatientSummary` (`externalId`, nome abreviado, CPF/telefone/e-mail **já mascarados**). A minimização acontece dentro do adapter (`toPatientSummary`), que descarta todo o resto da resposta; nada além disso é persistido ou logado. `findByCpf` = correspondência inequívoca (exatamente um paciente; nenhum ou vários → `null`), com implementação padrão sobre `searchByCpf`. Erros normalizados em `PatientProviderError` (`unavailable` → 503 com mensagem de indisponibilidade temporária; `invalid` → 400; `not_found`). Todo adapter é envolvido por `ResilientPatientProvider` (cockatiel, MIT): timeout por tentativa (`PATIENT_API_TIMEOUT_MS`, 2 s), retry com backoff exponencial com jitter só para falhas transitórias (todas as operações são leituras; `PATIENT_API_RETRIES`, 2), circuit breaker por falhas consecutivas (`PATIENT_API_BREAKER_THRESHOLD`, 5; meio-aberto após `PATIENT_API_BREAKER_HALF_OPEN_MS`, 30 s) por processo. Erros inesperados viram `unavailable` sem propagar a mensagem original. Métricas: `patient_provider_request_duration_seconds{operation,outcome}`, `patient_provider_errors_total`, `patient_provider_circuit_state`. Suíte de contrato única (`test/contracts/patient-provider.contract.ts`) para todo adapter.
+- **Descartado:** `opossum` (só breaker) e implementação própria (mais código a testar).
+
+## D-067 — Snapshot de exibição do paciente
+
+- **Data:** 2026-10-02
+- **Decisão:** a fila e o detalhe exibem o rótulo mascarado já existente em `prescription_submissions.patient_display_label` (Fase 3, item C), agora com `patient_label_captured_at` (quando foi obtido da API; para links, a criação do link). Nenhuma listagem chama a API de pacientes. Backfill das receitas de link existentes com a data de criação do link.
+- **Descartado:** consultar a API a cada exibição (latência, indisponibilidade, mais exposição de dados).
+
+## D-068 — Feature flag da integração e adapter HTTP pendente
+
+- **Data:** 2026-10-02
+- **Decisão:** `PATIENT_INTEGRATION_ENABLED` (padrão **false**): desligada, o provider responde indisponibilidade e nada mais quebra. `PATIENT_PROVIDER=mock|http` (mock proibido em produção). Não existe especificação em `docs/integrations/`, então o `HttpPatientProvider` é apenas um esqueleto (configuração por env: `PATIENT_API_BASE_URL`, `PATIENT_API_TOKEN`, timeouts); ligar a integração com `http` **falha na inicialização** até o contrato ser implementado (`docs/integrations/patients-api-checklist.md`). `findByExternalId` permanece no contrato apenas até a etapa 2 (referência opaca). Telefone normalizado no `shared` (somente dígitos, DDD + número, sem DDI 55).
+- **Descartado:** inventar endpoints/formatos; adapter HTTP que falharia silenciosamente em produção.

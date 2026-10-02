@@ -39,7 +39,12 @@ interface SubmissionContext {
   storeId: string;
   sourceChannel: SourceChannel;
   cpf?: string;
-  link?: { linkId: string; patientExternalId: string; patientDisplayLabel: string };
+  link?: {
+    linkId: string;
+    patientExternalId: string;
+    patientDisplayLabel: string;
+    patientLabelCapturedAt: Date;
+  };
 }
 
 const DAY_MS = 86_400_000;
@@ -174,6 +179,7 @@ export class SubmissionsService {
           linkId: link.linkId,
           patientExternalId: link.patientExternalId,
           patientDisplayLabel: link.patientDisplayLabel,
+          patientLabelCapturedAt: link.patientLabelCapturedAt,
         },
       };
     }
@@ -219,6 +225,7 @@ export class SubmissionsService {
                 : 'NOT_IDENTIFIED',
               patientExternalId: context.link?.patientExternalId ?? null,
               patientDisplayLabel: context.link?.patientDisplayLabel ?? null,
+              patientLabelCapturedAt: context.link?.patientLabelCapturedAt ?? null,
               sourceChannel: context.sourceChannel,
               patientUploadLinkId: context.link?.linkId ?? null,
               idempotencyKey: idempotencyKey ?? null,

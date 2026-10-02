@@ -1,18 +1,35 @@
 import { maskCpf, maskEmail, maskName, maskPhone, type PatientSearchResult } from '@receita/shared';
-import type { Patient } from './patient.provider.js';
+import type { PatientSummary } from './patient.provider.js';
 
-/** Converte o paciente da API no mínimo necessário para desambiguação, já mascarado. */
-export function toSearchResult(patient: Patient): PatientSearchResult {
+/** Registro bruto como um adapter o recebe da API (existe apenas em memória, no adapter). */
+export interface RawPatient {
+  externalId: string;
+  name: string;
+  /** Somente dígitos. */
+  cpf: string;
+  phone: string | null;
+  email: string | null;
+}
+
+/**
+ * Minimização na fronteira do adapter (PRD §8.2): mascara e descarta todo o resto.
+ * Campos extras do objeto de origem nunca são copiados.
+ */
+export function toPatientSummary(raw: RawPatient): PatientSummary {
   return {
-    externalId: patient.externalId,
-    displayName: maskName(patient.name),
-    cpfMasked: maskCpf(patient.cpf),
-    phoneMasked: patient.phone ? maskPhone(patient.phone) : null,
-    emailMasked: patient.email ? maskEmail(patient.email) : null,
+    externalId: raw.externalId,
+    displayName: maskName(raw.name),
+    cpfMasked: maskCpf(raw.cpf),
+    phoneMasked: raw.phone ? maskPhone(raw.phone) : null,
+    emailMasked: raw.email ? maskEmail(raw.email) : null,
   };
 }
 
-/** Rótulo persistido no link personalizado (D-010). */
-export function patientDisplayLabel(patient: Patient): string {
-  return `${maskName(patient.name)} · CPF ${maskCpf(patient.cpf)}`;
+export function toSearchResult(patient: PatientSummary): PatientSearchResult {
+  return { ...patient };
+}
+
+/** Rótulo persistido no link e na receita (D-010). */
+export function patientDisplayLabel(patient: PatientSummary): string {
+  return `${patient.displayName} · CPF ${patient.cpfMasked}`;
 }

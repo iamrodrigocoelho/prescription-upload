@@ -32,6 +32,7 @@
     "argon2": "^0.45.1",
     "bullmq": "^6.3.10",
     "busboy": "^1.6.0",
+    "cockatiel": "^4.0.0",
     "cookie-parser": "^1.4.7",
     "csv-parse": "^7.0.3",
     "file-type": "^22.1.1",
