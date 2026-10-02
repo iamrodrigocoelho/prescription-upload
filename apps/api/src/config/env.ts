@@ -122,6 +122,10 @@ export const envSchema = z
     PATIENT_API_TIMEOUT_MS: z.coerce.number().int().min(200).max(10_000).default(2_000),
     PATIENT_API_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
     PATIENT_API_BREAKER_THRESHOLD: z.coerce.number().int().min(1).max(50).default(5),
+    // Identificação automática por CPF (D-072): job no worker.
+    PATIENT_AUTO_IDENTIFICATION_ENABLED: bool.default(false),
+    PATIENT_AUTO_IDENTIFICATION_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(6),
+    PATIENT_AUTO_IDENTIFICATION_BACKOFF_MS: z.coerce.number().int().min(100).default(30_000),
     // Busca manual: limites anti-enumeração (D-071)
     PATIENT_SEARCH_LIMIT_USER_PER_MINUTE: z.coerce.number().int().positive().default(20),
     PATIENT_SEARCH_LIMIT_USER_PER_HOUR: z.coerce.number().int().positive().default(100),
@@ -149,6 +153,13 @@ export const envSchema = z
     CPF_REVEAL_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(30),
   })
   .superRefine((env, ctx) => {
+    if (env.PATIENT_AUTO_IDENTIFICATION_ENABLED && !env.PATIENT_INTEGRATION_ENABLED) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['PATIENT_AUTO_IDENTIFICATION_ENABLED'],
+        message: 'a identificação automática exige PATIENT_INTEGRATION_ENABLED=true',
+      });
+    }
     if (env.PATIENT_INTEGRATION_ENABLED && env.PATIENT_PROVIDER === 'http') {
       // Contrato da API ainda não definido (PRD §42.4): ver docs/integrations/patients-api-checklist.md.
       ctx.addIssue({

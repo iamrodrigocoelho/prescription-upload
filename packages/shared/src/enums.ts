@@ -109,6 +109,8 @@ export const AuditAction = {
   PRESCRIPTION_FILE_VIEWED: 'prescription.file_viewed',
   PRESCRIPTION_FILE_DOWNLOADED: 'prescription.file_downloaded',
   PRESCRIPTION_CPF_REVEALED: 'prescription.cpf_revealed',
+  /** Vínculo automático (CPF) ou manual; o tipo vai em `metadata.linkType`. */
+  PRESCRIPTION_PATIENT_LINKED: 'prescription.patient_linked',
   SECURITY_PERSONALIZED_LINK_TAMPERING: 'security.personalized_link_tampering',
   AUTHZ_DENIED: 'authz.denied',
 } as const;

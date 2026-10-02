@@ -169,4 +169,10 @@ export type RealtimeEvent =
       operationalStatus: OperationalStatus;
       version: number;
     }
+  | {
+      type: 'prescription.patient_linked';
+      prescriptionId: string;
+      storeId: string;
+      identificationStatus: IdentificationStatus;
+    }
   | { type: 'counters.updated'; storeId: string };

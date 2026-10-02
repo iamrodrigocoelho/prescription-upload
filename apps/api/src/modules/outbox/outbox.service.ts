@@ -1,3 +1,4 @@
+import type { IdentificationStatus } from '@receita/shared';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client.js';
 
@@ -6,6 +7,11 @@ export interface OutboxEventMap {
   /** Consumido pela fila de anexos (varredura/derivados) e pelo tempo real. */
   'prescription.submitted': { submissionId: string; storeId: string };
   'prescription.viewed': { submissionId: string; storeId: string };
+  'prescription.patient_linked': {
+    submissionId: string;
+    storeId: string;
+    identificationStatus: IdentificationStatus;
+  };
   'prescription.status_changed': {
     submissionId: string;
     storeId: string;

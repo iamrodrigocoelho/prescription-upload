@@ -8,6 +8,11 @@ import {
   type ProcessSubmissionJob,
   submissionJobId,
 } from '../attachments/attachments.queue.js';
+import {
+  IDENTIFY_PATIENT_JOB,
+  identificationJobId,
+  type IdentifyPatientJob,
+} from '../patient-identification/patient-identification.queue.js';
 import { RealtimePublisher } from '../realtime/realtime-publisher.js';
 import type { OutboxEventMap } from './outbox.service.js';
 
@@ -30,6 +35,18 @@ export function toRealtimeEvents(type: string, payload: unknown): RealtimeEvent[
         { type: 'prescription.viewed', prescriptionId: p.submissionId, storeId: p.storeId },
         counters,
       ];
+    case 'prescription.patient_linked': {
+      const linked = payload as OutboxEventMap['prescription.patient_linked'];
+      return [
+        {
+          type: 'prescription.patient_linked',
+          prescriptionId: linked.submissionId,
+          storeId: linked.storeId,
+          identificationStatus: linked.identificationStatus,
+        },
+        counters,
+      ];
+    }
     case 'prescription.status_changed':
       return [
         {
@@ -87,7 +104,14 @@ export class OutboxDispatcher {
     return rows.length;
   }
 
-  async dispatchBatch(queue: Queue<ProcessSubmissionJob>): Promise<number> {
+  /**
+   * `identificationQueue` só é passado com a identificação automática ligada
+   * (PATIENT_AUTO_IDENTIFICATION_ENABLED); o próprio job revalida as condições.
+   */
+  async dispatchBatch(
+    queue: Queue<ProcessSubmissionJob>,
+    identificationQueue?: Queue<IdentifyPatientJob>,
+  ): Promise<number> {
     return this.prisma.$transaction(async (tx) => {
       const events = await tx.$queryRaw<
         { id: string; type: string; payload: unknown; attempts: number }[]
@@ -107,6 +131,14 @@ export class OutboxDispatcher {
                 jobId: submissionJobId(submissionId),
               },
             );
+            if (identificationQueue) {
+              await identificationQueue.add(
+                IDENTIFY_PATIENT_JOB,
+                { submissionId },
+                // Tentativas e backoff vêm de `defaultJobOptions` da fila (env).
+                { jobId: identificationJobId(submissionId) },
+              );
+            }
           }
           await this.realtime.publish(toRealtimeEvents(event.type, event.payload));
           await tx.outboxEvent.update({
