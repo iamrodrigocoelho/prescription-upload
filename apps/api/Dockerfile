@@ -18,6 +18,8 @@ RUN pnpm --filter @receita/api --prod deploy /out \
 FROM node:24.21.0-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
+# Correções do Alpine publicadas após a imagem base (ex.: musl e zlib, Trivy 2026-11-26).
+RUN apk upgrade --no-cache
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-v* \
   && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg
 COPY --from=build --chown=node:node /out .

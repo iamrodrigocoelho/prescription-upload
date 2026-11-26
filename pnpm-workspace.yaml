@@ -9,6 +9,11 @@ trustPolicy: no-downgrade
 # O lockfile atual foi auditado antes de ativar a janela de 7 dias. Novas
 # resoluções seguem a política; PRs com lockfile alterado exigem revisão.
 trustLockfile: true
+# Versões publicadas há mais de 1 ano não passam pela checagem de rebaixamento
+# de confiança: ela compara só datas e recusa correções legítimas de linhas
+# antigas (ex.: semver@6.3.1). Tudo o que é mais recente continua checado.
+# Aprovado pelo responsável do produto em 2026-11-26 (D-088).
+trustPolicyIgnoreAfter: 525600
 injectWorkspacePackages: true
 
 # Prisma 7.10 fixa versões anteriores às correções de GHSA-ggr8-5vv4-36mx,
@@ -16,6 +21,15 @@ injectWorkspacePackages: true
 overrides:
   deepmerge-ts: 8.0.2
   mysql2: 3.23.1
+  # Advisories (Trivy/pnpm audit, 2026-11-26) em dependências transitivas. Os
+  # seletores só atuam sobre as versões vulneráveis; remover quando os pacotes
+  # que as trazem (express, @nestjs/platform-express, @prisma/config,
+  # @hookform/resolvers, vitest, eslint-plugin-react-hooks) subirem. Ver D-088.
+  'body-parser@<2.4.0': 2.4.0
+  'multer@<2.5.0': 2.5.0
+  'effect@<3.22.1': 3.22.1
+  'zod@<4.6.6': 4.6.7
+  'vite@<8.3.3': 8.3.3
 
 # Pacotes autorizados a executar scripts de instalação (pnpm bloqueia por padrão).
 allowBuilds:
