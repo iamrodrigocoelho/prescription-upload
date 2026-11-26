@@ -477,12 +477,29 @@ Para atender ao requisito explícito de “concluir o reCAPTCHA antes de habilit
 
 Fluxo principal:
 
-`Recebida → Em análise → Em atendimento → Finalizada`
+`Recebida → Em análise → Aprovada → Em atendimento → Finalizada`
 
-Estados alternativos:
+A análise termina em uma decisão (D-087):
+
+- **Aprovada** — segue para atendimento; o atendimento só começa após a aprovação;
+- **Reprovada** — estado final, com motivo obrigatório;
+- **Reenvio solicitado** — estado final, com motivo obrigatório. O sistema apenas registra; a loja comunica o cliente pelo canal que já utiliza (sem envio automático no MVP).
+
+Estados alternativos (a partir de qualquer estado não final):
 
 - **Cancelada**
 - **Não atendida**
+
+Motivos de **Reprovada** e **Reenvio solicitado** (um ou mais):
+
+- Data de emissão da receita expirada;
+- CRM ilegível;
+- Medicamento não consta na receita;
+- Conteúdo ilegível;
+- Falta assinatura ou carimbo do prescritor;
+- Arquivo incompleto ou cortado;
+- Receita de outro paciente;
+- Outros — exige descrição curta (até 200 caracteres), sem dados pessoais do paciente. A descrição fica apenas no histórico da receita: não vai para logs, auditoria, eventos ou analytics.
 
 > A identificação do paciente é um eixo separado do status operacional. Uma receita pode, por exemplo, estar **Em análise** e simultaneamente **Não identificada**.
 
@@ -509,7 +526,8 @@ Após um envio válido:
 - Colaborador da Loja poderá alterar status de receitas de sua loja.
 - Gestor/Supervisor poderá alterar status das lojas sob sua responsabilidade.
 - Administrador poderá alterar qualquer receita.
-- Toda alteração deverá ser registrada na auditoria.
+- Toda alteração deverá ser registrada na auditoria (com os códigos dos motivos, quando houver).
+- Estados finais (Reprovada, Reenvio solicitado, Finalizada, Cancelada, Não atendida) só podem ser reabertos para **Em análise** por Gestor ou Administrador.
 - O sistema não deverá exigir que o paciente esteja identificado para visualizar a receita.
 
 ---

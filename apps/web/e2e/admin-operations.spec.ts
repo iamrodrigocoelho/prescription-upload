@@ -258,6 +258,23 @@ test.describe('Operação da loja', () => {
     await expect(page.getByRole('button', { name: 'Alterar status' })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.getByText('Status alterado para Em análise.').first()).toBeVisible();
+
+    // Reprovação exige motivo; "Outros" exige descrição (D-087).
+    await page.getByLabel('Novo status').selectOption('REJECTED');
+    await page.getByRole('button', { name: 'Alterar status' }).click();
+    await expect(page.getByText('Selecione ao menos um motivo.')).toBeVisible();
+    await page.getByRole('checkbox', { name: 'CRM ilegível' }).check();
+    await page.getByRole('checkbox', { name: 'Outros' }).check();
+    await page.getByRole('button', { name: 'Alterar status' }).click();
+    await expect(page.getByText('Descreva o motivo.', { exact: true })).toBeVisible();
+    await page.getByLabel(/Descreva o motivo/).fill('Receita rasurada');
+    await page.getByRole('button', { name: 'Alterar status' }).click();
+    const confirm = page.getByRole('alertdialog');
+    await expect(confirm.getByText('Marcar como Reprovada?')).toBeVisible();
+    await confirm.getByRole('button', { name: 'Confirmar' }).click();
+    await expect(page.getByText('Status alterado para Reprovada.').first()).toBeVisible();
+    await expect(page.getByText('Motivos da reprovação')).toBeVisible();
+    await expect(page.getByText('Outros: Receita rasurada')).toBeVisible();
   });
 });
 

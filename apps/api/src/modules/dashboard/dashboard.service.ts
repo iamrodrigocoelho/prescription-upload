@@ -10,6 +10,7 @@ import {
   type DashboardSummary,
   type DashboardTimeseries,
   type DurationStat,
+  FINAL_STATUSES,
   hasPermission,
   isStoreInScope,
   OperationalStatus,
@@ -214,7 +215,7 @@ export class DashboardService {
              count(*) FILTER (WHERE s.first_viewed_at IS NULL)::int AS unviewed,
              count(*) FILTER (WHERE s.identification_status = 'NOT_IDENTIFIED')::int AS unidentified,
              count(*) FILTER (
-               WHERE s.operational_status NOT IN ('FINISHED', 'CANCELLED', 'NOT_SERVED'))::int AS open
+               WHERE s.operational_status::text NOT IN (${Prisma.join([...FINAL_STATUSES])}))::int AS open
         FROM prescription_submissions s
         JOIN stores st ON st.id = s.store_id
        WHERE ${scope} AND s.created_at >= ${w.start} AND s.created_at < ${w.end}

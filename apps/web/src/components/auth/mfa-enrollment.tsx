@@ -1,12 +1,12 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import { enterAdmin } from '@/lib/navigation';
 import { safeNextPath } from '@/lib/safe-next';
 import { useClearSession } from '@/lib/session';
 import { TotpSetup } from './totp-setup';
 
 export function MfaEnrollment() {
-  const router = useRouter();
   const next = safeNextPath(useSearchParams().get('next'));
   const clearSession = useClearSession();
   return (
@@ -20,7 +20,7 @@ export function MfaEnrollment() {
         doneLabel="Continuar para o painel"
         onCompleted={() => {
           clearSession();
-          router.replace(next);
+          enterAdmin(next);
         }}
       />
     </div>

@@ -137,6 +137,9 @@ describe('Dashboard (e2e)', () => {
     expect(byStatus.body.items).toEqual([
       { status: 'RECEIVED', count: 2 },
       { status: 'IN_REVIEW', count: 0 },
+      { status: 'APPROVED', count: 0 },
+      { status: 'REJECTED', count: 0 },
+      { status: 'RESUBMISSION_REQUESTED', count: 0 },
       { status: 'IN_SERVICE', count: 0 },
       { status: 'FINISHED', count: 1 },
       { status: 'CANCELLED', count: 1 },

@@ -4,8 +4,8 @@ import Image from 'next/image';
 import { cx } from '@/lib/cx';
 
 const LOGO_PATH = '/brand/venancio-logo.png';
-// Proporção do arquivo oficial (/img/logo/venancio_logo-png.png: 1780 × 351).
-const LOGO_RATIO = 1780 / 351;
+// Proporção do arquivo oficial (/img/logo/logo_venancio.png: 1000 × 172).
+const LOGO_RATIO = 1000 / 172;
 
 /**
  * Logotipo oficial, carregado exclusivamente de /img/logo (copiado para

@@ -5,7 +5,9 @@ import {
   type MalwareScanStatus,
   OperationalStatus,
   SourceChannel,
+  StatusReason,
 } from '../enums.js';
+import { requiresReason, STATUS_REASON_NOTE_MAX } from '../status-matrix.js';
 import { uuidSchema } from './common.js';
 import { queryBoolean } from './pagination.js';
 
@@ -115,6 +117,16 @@ export interface TimelineEntry {
   toStatus?: OperationalStatus;
   filePosition?: number;
   linkType?: string;
+  /** Motivos de Reprovada / Reenvio solicitado (sem o texto livre). */
+  reasons?: StatusReason[];
+}
+
+/** Motivos da decisão atual (Reprovada / Reenvio solicitado). */
+export interface PrescriptionStatusDecision {
+  reasons: StatusReason[];
+  reasonNote: string | null;
+  decidedAt: string;
+  actorName: string | null;
 }
 
 export interface PrescriptionDetail {
@@ -130,16 +142,63 @@ export interface PrescriptionDetail {
   version: number;
   /** Transições permitidas ao usuário atual (matriz compartilhada). */
   allowedTransitions: OperationalStatus[];
+  /** Presente quando o status atual exige motivos. */
+  statusDecision: PrescriptionStatusDecision | null;
   files: PrescriptionFileView[];
   timeline: TimelineEntry[];
 }
+
+/** Sequência com cara de CPF (com ou sem pontuação): proibida no texto livre. */
+const CPF_LIKE = /\d{3}\.?\d{3}\.?\d{3}-?\d{2}/;
 
 export const updatePrescriptionStatusSchema = z
   .object({
     toStatus: z.enum(OperationalStatus),
     version: z.number().int().min(0),
+    /** Obrigatório (≥ 1) para Reprovada e Reenvio solicitado; proibido nos demais. */
+    reasons: z.array(z.enum(StatusReason)).max(Object.keys(StatusReason).length).optional(),
+    /** Detalhe de "Outros" (obrigatório quando OTHER é marcado). */
+    reasonNote: z.string().trim().max(STATUS_REASON_NOTE_MAX).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    const reasons = value.reasons ?? [];
+    const note = value.reasonNote ?? '';
+    if (!requiresReason(value.toStatus)) {
+      if (reasons.length > 0 || note !== '') {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['reasons'],
+          message: 'Motivos só se aplicam a Reprovada e Reenvio solicitado.',
+        });
+      }
+      return;
+    }
+    if (reasons.length === 0) {
+      ctx.addIssue({ code: 'custom', path: ['reasons'], message: 'Selecione ao menos um motivo.' });
+    }
+    if (new Set(reasons).size !== reasons.length) {
+      ctx.addIssue({ code: 'custom', path: ['reasons'], message: 'Motivo repetido.' });
+    }
+    const hasOther = reasons.includes(StatusReason.OTHER);
+    if (hasOther && note === '') {
+      ctx.addIssue({ code: 'custom', path: ['reasonNote'], message: 'Descreva o motivo.' });
+    }
+    if (!hasOther && note !== '') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['reasonNote'],
+        message: 'A descrição só se aplica ao motivo "Outros".',
+      });
+    }
+    if (CPF_LIKE.test(note)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['reasonNote'],
+        message: 'Não inclua CPF ou outros dados pessoais na descrição.',
+      });
+    }
+  });
 export type UpdatePrescriptionStatusInput = z.infer<typeof updatePrescriptionStatusSchema>;
 
 export const fileUrlQuerySchema = z

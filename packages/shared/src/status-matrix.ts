@@ -1,19 +1,54 @@
-import { type OperationalStatus, Role } from './enums.js';
+import { type OperationalStatus, Role, type StatusReason } from './enums.js';
 
 /**
- * Matriz de transições do status operacional (PRD §11; aprovada na Fase 3 — D-055).
- * Fonte única para backend e frontend.
+ * Matriz de transições do status operacional (PRD §11; D-055, revista em D-087).
+ * Fonte única para backend e frontend. A análise termina em uma decisão:
+ * Aprovada segue para atendimento; Reprovada e Reenvio solicitado encerram.
  */
 const FORWARD: Readonly<Record<OperationalStatus, readonly OperationalStatus[]>> = {
-  RECEIVED: ['IN_REVIEW', 'IN_SERVICE', 'CANCELLED', 'NOT_SERVED'],
-  IN_REVIEW: ['IN_SERVICE', 'CANCELLED', 'NOT_SERVED'],
+  RECEIVED: ['IN_REVIEW', 'CANCELLED', 'NOT_SERVED'],
+  IN_REVIEW: ['APPROVED', 'REJECTED', 'RESUBMISSION_REQUESTED', 'CANCELLED', 'NOT_SERVED'],
+  APPROVED: ['IN_SERVICE', 'IN_REVIEW', 'CANCELLED', 'NOT_SERVED'],
   IN_SERVICE: ['IN_REVIEW', 'FINISHED', 'CANCELLED', 'NOT_SERVED'],
+  REJECTED: [],
+  RESUBMISSION_REQUESTED: [],
   FINISHED: [],
   CANCELLED: [],
   NOT_SERVED: [],
 };
 
-export const FINAL_STATUSES: readonly OperationalStatus[] = ['FINISHED', 'CANCELLED', 'NOT_SERVED'];
+export const FINAL_STATUSES: readonly OperationalStatus[] = [
+  'REJECTED',
+  'RESUBMISSION_REQUESTED',
+  'FINISHED',
+  'CANCELLED',
+  'NOT_SERVED',
+];
+
+/** Decisões que exigem ao menos um motivo (D-087). */
+export const STATUSES_REQUIRING_REASON: readonly OperationalStatus[] = [
+  'REJECTED',
+  'RESUBMISSION_REQUESTED',
+];
+
+export function requiresReason(status: OperationalStatus): boolean {
+  return STATUSES_REQUIRING_REASON.includes(status);
+}
+
+/** Limite do texto de "Outros" (sem dados pessoais — validado no schema). */
+export const STATUS_REASON_NOTE_MAX = 200;
+
+/** Ordem de exibição dos motivos. */
+export const STATUS_REASON_LABELS: Readonly<Record<StatusReason, string>> = {
+  ISSUE_DATE_EXPIRED: 'Data de emissão da receita expirada',
+  CRM_ILLEGIBLE: 'CRM ilegível',
+  MEDICATION_NOT_LISTED: 'Medicamento não consta na receita',
+  CONTENT_ILLEGIBLE: 'Conteúdo ilegível',
+  MISSING_SIGNATURE_STAMP: 'Falta assinatura ou carimbo do prescritor',
+  INCOMPLETE_FILE: 'Arquivo incompleto ou cortado',
+  DIFFERENT_PATIENT: 'Receita de outro paciente',
+  OTHER: 'Outros',
+};
 
 /** Reabertura de estado final (→ Em análise): somente Gestor e Admin. */
 export const REOPEN_TARGET: OperationalStatus = 'IN_REVIEW';
@@ -39,6 +74,9 @@ export function isReopen(from: OperationalStatus, to: OperationalStatus): boolea
 export const OPERATIONAL_STATUS_LABELS: Readonly<Record<OperationalStatus, string>> = {
   RECEIVED: 'Recebida',
   IN_REVIEW: 'Em análise',
+  APPROVED: 'Aprovada',
+  REJECTED: 'Reprovada',
+  RESUBMISSION_REQUESTED: 'Reenvio solicitado',
   IN_SERVICE: 'Em atendimento',
   FINISHED: 'Finalizada',
   CANCELLED: 'Cancelada',
