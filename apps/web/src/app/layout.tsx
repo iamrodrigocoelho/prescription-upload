@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   description: 'Envio e gestão de receitas da Drogaria Venancio.',
   robots: { index: false, follow: false },
   referrer: 'strict-origin-when-cross-origin',
+  // Símbolo oficial de /img/logo, copiado por scripts/sync-brand.mjs.
+  icons: { icon: '/brand/venancio-icon.png', apple: '/brand/venancio-icon.png' },
 };
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
