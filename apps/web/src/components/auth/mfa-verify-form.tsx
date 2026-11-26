@@ -2,18 +2,18 @@
 
 import type { TotpVerifyResponse } from '@receita/shared';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { CodeInput } from '@/components/ui/code-input';
 import { TextField } from '@/components/ui/field';
 import { api, ApiError, errorMessage } from '@/lib/api';
+import { enterAdmin } from '@/lib/navigation';
 import { safeNextPath } from '@/lib/safe-next';
 import { useClearSession } from '@/lib/session';
 
 export function MfaVerifyForm() {
-  const router = useRouter();
   const next = safeNextPath(useSearchParams().get('next'));
   const clearSession = useClearSession();
   const [useRecovery, setUseRecovery] = useState(false);
@@ -30,7 +30,7 @@ export function MfaVerifyForm() {
       const body = useRecovery ? { recoveryCode: value } : { code: value };
       await api<TotpVerifyResponse>('/auth/totp/verify', { method: 'POST', body });
       clearSession();
-      router.replace(next);
+      enterAdmin(next);
     } catch (e) {
       if (e instanceof ApiError && (e.code === 'UNAUTHENTICATED' || e.code === 'RATE_LIMITED')) {
         setExpired(true);

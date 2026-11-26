@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import type { Role } from '@receita/shared';
+import type { OperationalStatus, Role } from '@receita/shared';
 import { generateSecret } from 'otplib';
 import { CryptoService } from '../../src/infra/crypto/crypto.service.js';
 import { hashPassword } from '../../src/infra/crypto/password-hasher.js';
@@ -76,8 +76,7 @@ export async function createUser(
 export interface CreateSubmissionOptions {
   storeId: string;
   cpf?: string;
-  operationalStatus?:
-    'RECEIVED' | 'IN_REVIEW' | 'IN_SERVICE' | 'FINISHED' | 'CANCELLED' | 'NOT_SERVED';
+  operationalStatus?: OperationalStatus;
   identificationStatus?: 'NOT_IDENTIFIED' | 'IDENTIFIED_PERSONALIZED_LINK' | 'IDENTIFIED_MANUAL';
   sourceChannel?: 'GENERIC' | 'STORE_LINK' | 'PERSONALIZED_LINK';
   createdAt?: Date;

@@ -1,4 +1,8 @@
-import { OPERATIONAL_STATUS_LABELS, type TimelineEntry } from '@receita/shared';
+import {
+  OPERATIONAL_STATUS_LABELS,
+  STATUS_REASON_LABELS,
+  type TimelineEntry,
+} from '@receita/shared';
 import { formatDateTime } from '@/lib/format';
 
 function describe(entry: TimelineEntry): string {
@@ -12,8 +16,12 @@ function describe(entry: TimelineEntry): string {
       return `Visualizou o ${file}`;
     case 'file_downloaded':
       return `Baixou o ${file}`;
-    case 'status_changed':
-      return `Status: ${entry.fromStatus ? OPERATIONAL_STATUS_LABELS[entry.fromStatus] : '—'} → ${entry.toStatus ? OPERATIONAL_STATUS_LABELS[entry.toStatus] : '—'}`;
+    case 'status_changed': {
+      const base = `Status: ${entry.fromStatus ? OPERATIONAL_STATUS_LABELS[entry.fromStatus] : '—'} → ${entry.toStatus ? OPERATIONAL_STATUS_LABELS[entry.toStatus] : '—'}`;
+      return entry.reasons?.length
+        ? `${base} (${entry.reasons.map((reason) => STATUS_REASON_LABELS[reason]).join('; ')})`
+        : base;
+    }
     case 'reopened':
       return `Reaberta: ${entry.fromStatus ? OPERATIONAL_STATUS_LABELS[entry.fromStatus] : '—'} → ${entry.toStatus ? OPERATIONAL_STATUS_LABELS[entry.toStatus] : '—'}`;
     case 'patient_linked':

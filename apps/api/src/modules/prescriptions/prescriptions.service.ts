@@ -10,8 +10,10 @@ import {
   isReopen,
   type OperationalStatus,
   Permission,
+  requiresReason,
   type UpdatePrescriptionStatusInput,
   type PrescriptionDetail,
+  type PrescriptionStatusDecision,
   type PrescriptionFileView,
   type ListPrescriptionsQuery,
   maskCpf,
@@ -177,6 +179,7 @@ export class PrescriptionsService {
       patientLabel: submission.patientDisplayLabel,
       version: submission.version,
       allowedTransitions: allowedTransitions(submission.operationalStatus, auth.user.role),
+      statusDecision: this.statusDecision(submission),
       files: submission.files.map((file) => this.fileView(file)),
       timeline: buildTimeline({
         receivedAt: submission.createdAt,
@@ -186,6 +189,7 @@ export class PrescriptionsService {
           createdAt: row.createdAt,
           fromStatus: row.fromStatus,
           toStatus: row.toStatus,
+          reasons: row.reasons,
           actorName: row.changedBy?.name ?? null,
         })),
         patientLinks: submission.patientLinkHistory.map((row) => ({
@@ -240,6 +244,10 @@ export class PrescriptionsService {
       ]);
     }
 
+    // O schema já garante a coerência; aqui só normaliza (motivos apenas onde se aplicam).
+    const reasons = requiresReason(to) ? (input.reasons ?? []) : [];
+    const reasonNote = requiresReason(to) && input.reasonNote ? input.reasonNote : null;
+
     const version = submission.version + 1;
     await this.prisma.$transaction(async (tx) => {
       const updated = await tx.prescriptionSubmission.updateMany({
@@ -248,7 +256,14 @@ export class PrescriptionsService {
       });
       if (updated.count !== 1) throw this.conflict();
       await tx.statusHistory.create({
-        data: { submissionId: id, fromStatus: from, toStatus: to, changedByUserId: auth.user.id },
+        data: {
+          submissionId: id,
+          fromStatus: from,
+          toStatus: to,
+          reasons,
+          reasonNote,
+          changedByUserId: auth.user.id,
+        },
       });
       await this.audit.record(
         {
@@ -258,7 +273,8 @@ export class PrescriptionsService {
           entityType: 'PrescriptionSubmission',
           entityId: id,
           storeId: submission.storeId,
-          metadata: { from, to },
+          // Só códigos de motivo; o texto livre de "Outros" nunca vai para a auditoria.
+          metadata: reasons.length > 0 ? { from, to, reasons } : { from, to },
         },
         tx,
       );
@@ -273,6 +289,28 @@ export class PrescriptionsService {
       operationalStatus: to,
       version,
       allowedTransitions: allowedTransitions(to, auth.user.role),
+    };
+  }
+
+  /** Motivos da decisão vigente: último registro que levou ao status atual. */
+  private statusDecision(submission: {
+    operationalStatus: OperationalStatus;
+    statusHistory: {
+      toStatus: OperationalStatus;
+      reasons: PrescriptionStatusDecision['reasons'];
+      reasonNote: string | null;
+      createdAt: Date;
+      changedBy: { name: string } | null;
+    }[];
+  }): PrescriptionStatusDecision | null {
+    if (!requiresReason(submission.operationalStatus)) return null;
+    const last = submission.statusHistory.at(-1);
+    if (!last || last.toStatus !== submission.operationalStatus) return null;
+    return {
+      reasons: last.reasons,
+      reasonNote: last.reasonNote,
+      decidedAt: last.createdAt.toISOString(),
+      actorName: last.changedBy?.name ?? null,
     };
   }
 
