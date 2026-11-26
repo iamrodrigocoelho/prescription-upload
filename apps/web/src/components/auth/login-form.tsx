@@ -11,6 +11,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/field';
 import { api, ApiError, errorMessage } from '@/lib/api';
+import { enterAdmin } from '@/lib/navigation';
 import { safeNextPath } from '@/lib/safe-next';
 import { useClearSession } from '@/lib/session';
 
@@ -47,7 +48,9 @@ export function LoginForm() {
     try {
       const result = await api<LoginResponse>('/auth/login', { method: 'POST', body: values });
       clearSession();
-      router.replace(routeForStatus(result.status, next));
+      // Etapas de 2FA continuam em /login; a entrada no Admin recarrega o documento (CSP).
+      if (result.status === 'AUTHENTICATED') enterAdmin(next);
+      else router.replace(routeForStatus(result.status, next));
     } catch (e) {
       setError(
         e instanceof ApiError && e.code === 'INVALID_CREDENTIALS'

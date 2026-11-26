@@ -509,3 +509,10 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 - **Decisão técnica:** CLI isolado `retention` lista receitas vencidas por padrão. `--apply` exige, além do argumento, `RETENTION_EXECUTION_ENABLED=true`, referência não vazia da aprovação formal de Jurídico/DPO e confirmação explícita de bucket sem versionamento. O comando nunca é iniciado automaticamente pela API. Legal hold por receita fica restrito a Admin (`settings:manage`) e auditado. O descarte reivindica a receita de forma condicional, bloqueia acesso, apaga objetos e derivados/quarentena, minimiza identificadores no banco e no link, e grava auditoria com IDs/quantidades. Falhas são auditadas e retomáveis após dez minutos. A retenção mínima configurável continua 365 dias.
 - **Pendências bloqueantes:** Jurídico/DPO define política definitiva e autoriza execução; Operações/Security verificam versões, lifecycle e tempo finito de recuperação em backups. AuditLog e logs técnicos exigem política separada; registros históricos de auditoria podem conter identificadores externos. Ver `docs/privacy/retention.md`.
 - **Descartado:** ativar exclusão automaticamente ao vencer `retention_until` ou presumir que um delete simples do S3 remove versões e backups.
+
+## D-086 — Entrada no Admin com navegação completa (CSP por documento)
+
+- **Data:** 2026-11-26
+- **Contexto:** a CSP é definida por documento em `apps/web/src/proxy.ts`, e só o Admin libera a origem do storage (`img-src`/`frame-src`). Após o login, a navegação no cliente (`router.replace`) mantinha a CSP do `/login`, e o visualizador de anexos era bloqueado ("Não foi possível exibir a imagem. Use o download.") até um recarregamento.
+- **Decisão:** login concluído, verificação 2FA e cadastro de 2FA entram no Admin via `enterAdmin` (`apps/web/src/lib/navigation.ts`, `window.location.replace`), recarregando o documento com a CSP do Admin. As etapas intermediárias dentro de `/login/*` continuam com navegação no cliente.
+- **Descartado:** incluir a origem do storage na CSP das páginas públicas/de autenticação. Isso ampliaria a superfície sem necessidade, e a correção pela navegação é mais conservadora.
