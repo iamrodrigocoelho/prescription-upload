@@ -1,4 +1,10 @@
-import { type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, useId } from 'react';
+import {
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+  useId,
+} from 'react';
 import { AlertCircle } from 'lucide-react';
 import { cx } from '@/lib/cx';
 
@@ -109,6 +115,43 @@ export function SelectField({
       >
         {children}
       </select>
+    </FieldShell>
+  );
+}
+
+export interface TextAreaFieldProps extends Omit<
+  TextareaHTMLAttributes<HTMLTextAreaElement>,
+  'id'
+> {
+  label: string;
+  hint?: ReactNode;
+  error?: string;
+  ref?: React.Ref<HTMLTextAreaElement>;
+}
+
+export function TextAreaField({
+  label,
+  hint,
+  error,
+  required,
+  className,
+  ref,
+  rows = 3,
+  ...props
+}: TextAreaFieldProps) {
+  const id = useId();
+  return (
+    <FieldShell id={id} label={label} hint={hint} error={error} required={required}>
+      <textarea
+        id={id}
+        ref={ref}
+        rows={rows}
+        required={required}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy(id, hint, error)}
+        className={cx(CONTROL, 'py-2', error ? 'border-error' : 'border-line-strong', className)}
+        {...props}
+      />
     </FieldShell>
   );
 }

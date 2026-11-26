@@ -516,3 +516,12 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 - **Contexto:** a CSP é definida por documento em `apps/web/src/proxy.ts`, e só o Admin libera a origem do storage (`img-src`/`frame-src`). Após o login, a navegação no cliente (`router.replace`) mantinha a CSP do `/login`, e o visualizador de anexos era bloqueado ("Não foi possível exibir a imagem. Use o download.") até um recarregamento.
 - **Decisão:** login concluído, verificação 2FA e cadastro de 2FA entram no Admin via `enterAdmin` (`apps/web/src/lib/navigation.ts`, `window.location.replace`), recarregando o documento com a CSP do Admin. As etapas intermediárias dentro de `/login/*` continuam com navegação no cliente.
 - **Descartado:** incluir a origem do storage na CSP das páginas públicas/de autenticação. Isso ampliaria a superfície sem necessidade, e a correção pela navegação é mais conservadora.
+
+## D-087 — Decisão da análise: Aprovada, Reprovada e Reenvio solicitado
+
+- **Data:** 2026-11-26
+- **Contexto:** a operação pediu registrar o resultado da análise da receita, com o motivo de reprovação ou de pedido de reenvio. O PRD §11 (D-055) não previa decisão explícita.
+- **Decisão (aprovada pelo responsável do produto):** três novos status operacionais. A partir de **Em análise**: **Aprovada** (não final; segue para **Em atendimento**, que só é alcançável após aprovação), **Reprovada** e **Reenvio solicitado** (finais; reabertura por Gestor/Admin para Em análise, como os demais finais). Reprovada e Reenvio solicitado exigem ao menos um motivo de uma lista fixa (`StatusReason`); "Outros" exige descrição de até 200 caracteres. "Reenvio solicitado" só registra — a comunicação com o cliente segue pelos canais da loja, coerente com o MVP sem disparo de mensagens.
+- **Privacidade:** motivos e descrição ficam em `status_history` (`reasons`, `reason_note`). A auditoria recebe só os códigos; outbox, linha do tempo e analytics não recebem motivos de texto livre. A descrição recusa sequências com formato de CPF. Restrições `CHECK` no banco garantem: motivos somente nesses dois status, ao menos um motivo neles e descrição se e somente se "Outros".
+- **Mudança de comportamento:** removido o atalho Recebida → Em atendimento e Em análise → Em atendimento (agora exige Aprovada). Receitas já em atendimento não são migradas.
+- **Descartado:** substituir Finalizada/Não atendida pelos novos status (exigiria migração de dados); eixo separado de "parecer" (duplicaria o status na UI); texto livre sem limite ou sem descrição para "Outros".

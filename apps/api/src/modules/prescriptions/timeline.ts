@@ -1,4 +1,10 @@
-import { AuditAction, isReopen, type OperationalStatus, type TimelineEntry } from '@receita/shared';
+import {
+  AuditAction,
+  isReopen,
+  type OperationalStatus,
+  type StatusReason,
+  type TimelineEntry,
+} from '@receita/shared';
 
 export interface TimelineInput {
   receivedAt: Date;
@@ -7,6 +13,8 @@ export interface TimelineInput {
     createdAt: Date;
     fromStatus: OperationalStatus | null;
     toStatus: OperationalStatus;
+    /** Códigos de motivo (o texto livre não entra na linha do tempo). */
+    reasons?: StatusReason[];
     actorName: string | null;
   }[];
   patientLinks: { id: string; createdAt: Date; linkType: string; actorName: string | null }[];
@@ -55,6 +63,7 @@ export function buildTimeline(input: TimelineInput): TimelineEntry[] {
       actorName: row.actorName,
       fromStatus: row.fromStatus,
       toStatus: row.toStatus,
+      ...(row.reasons && row.reasons.length > 0 ? { reasons: row.reasons } : {}),
     });
   }
   if (!input.statusHistory.some((row) => row.fromStatus === null)) {

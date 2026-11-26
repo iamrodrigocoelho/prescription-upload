@@ -49,7 +49,8 @@ describe('Detalhe da receita (e2e)', () => {
       operationalStatus: 'RECEIVED',
       cpfMasked: '***.***.***-25',
       version: 0,
-      allowedTransitions: ['IN_REVIEW', 'IN_SERVICE', 'CANCELLED', 'NOT_SERVED'],
+      allowedTransitions: ['IN_REVIEW', 'CANCELLED', 'NOT_SERVED'],
+      statusDecision: null,
     });
     expect(res.body.files).toEqual([
       expect.objectContaining({

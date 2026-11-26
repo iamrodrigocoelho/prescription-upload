@@ -4,12 +4,25 @@ import {
   OPERATIONAL_STATUS_LABELS,
   type OperationalStatus,
 } from '@receita/shared';
-import { CircleDot, Hourglass, PlayCircle, Search, UserCheck, UserX } from 'lucide-react';
+import {
+  CircleCheck,
+  CircleDot,
+  CircleX,
+  Hourglass,
+  PlayCircle,
+  RotateCcw,
+  Search,
+  UserCheck,
+  UserX,
+} from 'lucide-react';
 import { StatusBadge, type BadgeTone } from '@/components/ui/status-badge';
 
 const OPERATIONAL_TONE: Record<OperationalStatus, BadgeTone> = {
   RECEIVED: 'info',
   IN_REVIEW: 'warning',
+  APPROVED: 'success',
+  REJECTED: 'error',
+  RESUBMISSION_REQUESTED: 'warning',
   IN_SERVICE: 'warning',
   FINISHED: 'success',
   CANCELLED: 'error',
@@ -19,6 +32,9 @@ const OPERATIONAL_TONE: Record<OperationalStatus, BadgeTone> = {
 const OPERATIONAL_ICON = {
   RECEIVED: CircleDot,
   IN_REVIEW: Search,
+  APPROVED: CircleCheck,
+  REJECTED: CircleX,
+  RESUBMISSION_REQUESTED: RotateCcw,
   IN_SERVICE: PlayCircle,
 } as const;
 

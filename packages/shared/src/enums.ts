@@ -14,12 +14,28 @@ export const ROLES = Object.values(Role);
 export const OperationalStatus = {
   RECEIVED: 'RECEIVED',
   IN_REVIEW: 'IN_REVIEW',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  RESUBMISSION_REQUESTED: 'RESUBMISSION_REQUESTED',
   IN_SERVICE: 'IN_SERVICE',
   FINISHED: 'FINISHED',
   CANCELLED: 'CANCELLED',
   NOT_SERVED: 'NOT_SERVED',
 } as const;
 export type OperationalStatus = (typeof OperationalStatus)[keyof typeof OperationalStatus];
+
+/** Motivos de Reprovada / Reenvio solicitado (D-087). */
+export const StatusReason = {
+  ISSUE_DATE_EXPIRED: 'ISSUE_DATE_EXPIRED',
+  CRM_ILLEGIBLE: 'CRM_ILLEGIBLE',
+  MEDICATION_NOT_LISTED: 'MEDICATION_NOT_LISTED',
+  CONTENT_ILLEGIBLE: 'CONTENT_ILLEGIBLE',
+  MISSING_SIGNATURE_STAMP: 'MISSING_SIGNATURE_STAMP',
+  INCOMPLETE_FILE: 'INCOMPLETE_FILE',
+  DIFFERENT_PATIENT: 'DIFFERENT_PATIENT',
+  OTHER: 'OTHER',
+} as const;
+export type StatusReason = (typeof StatusReason)[keyof typeof StatusReason];
 
 export const IdentificationStatus = {
   NOT_IDENTIFIED: 'NOT_IDENTIFIED',
