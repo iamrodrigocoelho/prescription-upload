@@ -510,11 +510,16 @@ Decisões que dependem de validação do negócio estão marcadas com **[pendent
 - **Pendências bloqueantes:** Jurídico/DPO define política definitiva e autoriza execução; Operações/Security verificam versões, lifecycle e tempo finito de recuperação em backups. AuditLog e logs técnicos exigem política separada; registros históricos de auditoria podem conter identificadores externos. Ver `docs/privacy/retention.md`.
 - **Descartado:** ativar exclusão automaticamente ao vencer `retention_until` ou presumir que um delete simples do S3 remove versões e backups.
 
-## D-088 — Correção de CVEs da imagem base e dependências bloqueadas pela política de confiança
+## D-088 — Correções de segurança: imagem base, dependências e política de confiança
 
 - **Data:** 2026-11-26
-- **Contexto:** o Trivy passou a reprovar as imagens por CVEs altas/críticas publicadas após o último build: `musl` 1.2.6-r2 e `zlib` 1.3.2-r0 (Alpine), `body-parser` 2.3.0, `multer` 2.4.0 e `effect` 3.20.0 (API) e `next` 16.3.8 (web).
-- **Decisão:** as imagens executam `apk upgrade --no-cache` na etapa de runtime para receber as correções do Alpine sem esperar a reconstrução da imagem `node`.
-- **Pendência (bloqueante para as dependências npm):** qualquer alteração do lockfile é recusada pelo `trustPolicy: no-downgrade` porque `prisma@7.10.0` (e 7.10.1) foi publicado pela conta `prismabot` sem atestado de origem, enquanto 7.8.0–7.9.1 tinham publicação verificada (GitHub Actions). Até Segurança confirmar a legitimidade dessas publicações ou o projeto migrar para uma versão com atestado, não atualizar `next` (≥ 16.4.1), `body-parser` (2.4.0), `multer` (2.5.0) e `effect` (3.22.1). O job de imagem continua falhando nesses pacotes até lá.
-- **Prioridade:** o `pnpm audit` do CI aponta ainda duas falhas **críticas** de execução remota de código sem autenticação em `next` < 16.4.1, além de `zod` < 4.6.6 e `vite` < 8.3.3 (altas). A verificação do `prisma@7.10.x` é urgente: enquanto ela não sai, a área pública (Next.js) fica exposta se publicada.
-- **Descartado:** desativar a política ou abrir exceção para `prisma@7.10.0` sem verificação; downgrade para 7.9.1 sem revalidar o D-083.
+- **Contexto:** o Trivy e o `pnpm audit` passaram a reprovar o projeto por advisories publicados após o último build: `musl` e `zlib` (Alpine); `next` < 16.4.1 com duas falhas **críticas** de execução remota de código sem autenticação; `zod` < 4.6.6, `vite` < 8.3.3, `body-parser` < 2.4.0, `multer` < 2.5.0 e `effect` < 3.22.1 (altas).
+- **Bloqueio encontrado:** com `trustPolicy: no-downgrade`, qualquer alteração de dependência reavalia a árvore do app e recusa versões sem atestado publicadas depois de versões com atestado, olhando só a data. Isso barrava pacotes legítimos já auditados no lockfile (ex.: `semver@6.3.1`, `eslint-import-resolver-typescript@3.10.1`) e congelava as dependências, impedindo corrigir o Next.js.
+- **Decisões (aprovadas pelo responsável do produto):**
+  - Imagens executam `apk upgrade --no-cache` no runtime (correções do Alpine).
+  - `trustPolicyIgnoreAfter: 525600` (1 ano): versões publicadas há mais de um ano deixam de passar pela checagem; todas as mais recentes continuam checadas. Nenhuma exceção por pacote.
+  - Prisma volta de 7.10.0 para **7.9.1** (`prisma`, `@prisma/client`, `@prisma/adapter-pg`). O `prisma` 7.10.x é publicado por token de bot sem atestado (prisma/orm#30035, issue prisma/orm#30850). A verificação indicou publicação legítima (mesmos arquivos e scripts de instalação, nenhum host ou chamada sensível nova, integridade igual ao lockfile), mas optou-se por não abrir exceção. Retornar à 7.10+ quando houver versão com atestado.
+  - `next` ^16.4.6 e `zod` ^4.6.7 diretos; `body-parser`, `multer`, `effect`, `zod` e `vite` transitivos via `overrides` com seletores restritos às versões vulneráveis.
+  - `eslint-config-next` permanece em 16.3.8 (ferramenta de lint, sem advisory).
+- **Validação:** `pnpm audit --audit-level high` sem achados (restam 9 moderadas e 2 baixas); lint, tipos, unitários, E2E da API (229) e do web (35) verdes com Prisma 7.9.1.
+- **Descartado:** exceção para `prisma@7.10.0`; desativar a política; manter as dependências congeladas com falhas críticas conhecidas.
